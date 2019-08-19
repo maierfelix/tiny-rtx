@@ -26,7 +26,7 @@ PhysicalDevice.prototype.create = function() {
       if (!extensionFound) isCompatible = false;
     });
     // compatible physical device found, use it
-    if (isCompatible && properties.deviceName === "GeForce RTX 2070") {
+    if (isCompatible) {
       compatibleDevice = physicalDevice;
     }
   });
