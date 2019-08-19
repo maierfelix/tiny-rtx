@@ -10,7 +10,7 @@ This demo should run smooth on RTX cards, I've tested it with an external *RTX 2
 
 If you have a GTX card, then you might be able to run the demo as well, as NVIDIA recently added RTX emulation for some cards of the GTX series (but prepare for some sloppiness).
 
-I recommend using the latest version of node, as this project depends heavely on [BigInt](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/BigInt), [N-API](https://nodejs.org/api/n-api.html), [WebAssembly](https://developer.mozilla.org/en-US/docs/WebAssembly) and [ESM](https://nodejs.org/api/esm.html)
+I recommend using the latest version of node, as this project heavily depends on [BigInt](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/BigInt), [N-API](https://nodejs.org/api/n-api.html), [WebAssembly](https://developer.mozilla.org/en-US/docs/WebAssembly) and [ESM](https://nodejs.org/api/esm.html)
 
 ## Screenshots
 
