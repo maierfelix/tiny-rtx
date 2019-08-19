@@ -1,0 +1,14 @@
+{
+  "name": "tiny-rtx",
+  "version": "0.0.1",
+  "scripts": {
+    "start": "node --experimental-modules ./main.mjs --verbose-log"
+  },
+  "dependencies": {
+    "@cwasm/lodepng": "^0.1.1",
+    "gl-matrix": "^3.0.0",
+    "nvk": "latest",
+    "nvk-essentials": "latest",
+    "tolw": "^0.1.4"
+  }
+}
