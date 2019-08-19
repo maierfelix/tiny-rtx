@@ -15,7 +15,7 @@ I recommend using the latest version of node, as this project heavily depends on
 ## Screenshots
 
 <p align="center">
-  <img src="https://i.imgur.com/pKerS1J.gif" height="288">
+  <a href="https://www.youtube.com/watch?v=ak2bvDGjzdM"><img src="https://i.imgur.com/pKerS1J.gif" height="288"></a>
 </p>
 
 |  |  |
