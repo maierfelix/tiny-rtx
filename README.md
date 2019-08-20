@@ -20,7 +20,7 @@ I recommend using the latest version of node, as this project heavily depends on
 
 |  |  |
 :-------------------------:|:-------------------------:
-<img src="https://i.imgur.com/RdzgkgC.png">  |  <img src="https://i.imgur.com/H8nIv6r.png">
+<img src="https://i.imgur.com/Lnnk68k.png">  |  <img src="https://i.imgur.com/H8nIv6r.png">
 <img src="https://i.imgur.com/5KOxFS1.png">  |  <img src="https://i.imgur.com/wPr1TH5.png">
 
 ## Installation
