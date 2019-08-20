@@ -27,13 +27,16 @@ export function readBinarySPIRVShader(path) {
 };
 
 export function readBinaryFile(path) {
-  return new Uint8Array(fs.readFileSync(path).buffer);
+  let buffer = fs.readFileSync(path);
+  let {byteOffset, byteLength} = buffer;
+  return new Uint8Array(buffer.buffer).subarray(byteOffset, byteOffset + byteLength);
 };
 
 export function readObjectFile(path) {
   LOG(`Reading Object File from '${path}'`);
   let binaryFile = readBinaryFile(path);
-  return tolw.loadObj(binaryFile);
+  let object = tolw.loadObj(binaryFile);
+  return object;
 };
 
 export function readPNGFile(path) {
