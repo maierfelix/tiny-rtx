@@ -16,6 +16,7 @@ export default class MemoryLayout {
     this.view = new Int8Array(this.buffer);
     this.layout = this.createLayout(memoryLayout);
   }
+
   createLayout(layout) {
     let {view} = this;
     let out = {};
@@ -29,6 +30,7 @@ export default class MemoryLayout {
     });
     return out;
   }
+
   set(name, value) {
     let dstView = this.layout[name];
     if (this.layout[name] === void 0) {

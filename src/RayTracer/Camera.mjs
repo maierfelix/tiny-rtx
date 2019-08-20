@@ -9,9 +9,9 @@ const FAR = 8192.0;
 const FOV = (35.0 * Math.PI) / 180;
 const APERTURE = 0.0275;
 const FOCUS_DISTANCE = 16.0;
-const SMOOTH_MOVEMENT = 0.5275;
+const SMOOTH_MOVEMENT = 0.65;
 
-const BOUNCE_COUNT = 6;
+const BOUNCE_COUNT = 12;
 const SAMPLE_COUNT = 8;
 
 const EPSILON = 0.001; // wow, harsh

@@ -112,3 +112,7 @@ ImageBuffer.prototype.createSampler = function(magFilter, minFilter, mipmapMode,
   result = vkCreateSampler(logicalDevice.instance, samplerCreateInfo, null, sampler);
   ASSERT_VK_RESULT(result);
 };
+
+ImageBuffer.prototype.fromImageData = function(data) {
+
+};

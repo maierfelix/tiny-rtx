@@ -16,6 +16,7 @@ PhysicalDevice.prototype.create = function() {
   let physicalDevices = PhysicalDevice.getPhysicalDevices(instanceHandle);
 
   let compatibleDevice = null;
+  let compatibleDevices = [];
   physicalDevices.map(physicalDevice => {
     let {properties} = PhysicalDevice.getDeviceProperties(physicalDevice);
     let availableExtensions = PhysicalDevice.getAvailableExtensions(physicalDevice);
@@ -27,9 +28,29 @@ PhysicalDevice.prototype.create = function() {
     });
     // compatible physical device found, use it
     if (isCompatible) {
-      compatibleDevice = physicalDevice;
+      compatibleDevices.push(physicalDevice);
     }
   });
+
+  // user prefers discrete over integrated GPU
+  if (global.PREFER_DISCRETE_GPU) {
+    compatibleDevices.map(physicalDevice => {
+      let {type} = PhysicalDevice.getDeviceProperties(physicalDevice);
+      // take the first GPU we find, but only if it's discrete
+      if (!compatibleDevice && type === "Discrete") {
+        compatibleDevice = physicalDevice;
+      }
+    });
+    // if we didn't find any discrete GPU
+    // pick the first one we found, but also give a warning
+    if (!compatibleDevice) {
+      compatibleDevice = compatibleDevices[0];
+      console.warn(`--prefer-discrete-gpu flag is active, but didn't find any compatible device`);
+    }
+  // simply pick the first GPU we encountered
+  } else {
+    compatibleDevice = compatibleDevices[0];
+  }
 
   if (!compatibleDevice) throw new Error(`No compatible GPU found!`);
 

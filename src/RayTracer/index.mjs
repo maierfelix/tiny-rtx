@@ -1,16 +1,20 @@
 import { LOG, ASSERT_VK_RESULT } from "../utils.mjs";
 
+import Camera from "./Camera.mjs";
+import Pipeline from "./Pipeline.mjs";
+
 import Buffer from "../Buffer.mjs";
 import ShaderModule from "../ShaderModule.mjs";
 import CommandBuffer from "../CommandBuffer.mjs";
 
-import Camera from "./Camera.mjs";
-import Pipeline from "./Pipeline.mjs";
 import ScratchBuffer from "./ScratchBuffer.mjs";
+import ShaderBindingTable from "./ShaderBindingTable.mjs";
+
 import OffscreenBuffer from "./OffscreenBuffer.mjs";
 import AccumulationBuffer from "./AccumulationBuffer.mjs";
-import ShaderBindingTable from "./ShaderBindingTable.mjs";
+import SceneTextureBuffer from "./SceneTextureBuffer.mjs";
 import SceneGeometryBuffer from "./SceneGeometryBuffer.mjs";
+
 import AccelerationGeometry from "./AccelerationGeometry.mjs";
 import AccelerationStructure from "./AccelerationStructure.mjs";
 
@@ -31,9 +35,11 @@ export default class RayTracer {
     this.accumulationBuffer = null;
     this.shaderBindingTable = null;
     this.sceneGeometryBuffer = null;
+    this.sceneTextureBuffer = null;
     this.pipeline = null;
     this.geometries = [];
     this.materials = [];
+    this.textures = [];
     this.accelerationStructures = {
       top: [],
       bottom: []
@@ -42,6 +48,8 @@ export default class RayTracer {
 };
 
 RayTracer.prototype.create = function() {
+  LOG("Creating Scene Texture Buffer");
+  this.sceneTextureBuffer = this.createSceneTextureBuffer();
   LOG("Creating Scene Geometry Buffer");
   this.sceneGeometryBuffer = this.createSceneGeometryBuffer();
   LOG("Creating Bottom-Level Acceleration Structures");
@@ -85,6 +93,11 @@ RayTracer.prototype.addGeometry = function(mesh) {
 RayTracer.prototype.addMaterial = function(material) {
   this.materials.push(material);
   return material;
+};
+
+RayTracer.prototype.addTexture = function(texture) {
+  this.textures.push(texture);
+  return texture;
 };
 
 RayTracer.prototype.getGeometryInstanceId = function(geometry) {
@@ -245,6 +258,14 @@ RayTracer.prototype.createShaders = function() {
   return [generation, closestHit, miss];
 };
 
+RayTracer.prototype.createSceneTextureBuffer = function() {
+  let {logicalDevice, physicalDevice} = this;
+  let {textures} = this;
+  let sceneTextureBuffer = new SceneTextureBuffer({ logicalDevice, physicalDevice });
+  sceneTextureBuffer.create(textures);
+  return sceneTextureBuffer;
+};
+
 RayTracer.prototype.createSceneGeometryBuffer = function() {
   let {logicalDevice, physicalDevice} = this;
   let {geometries, materials} = this;
@@ -332,7 +353,14 @@ RayTracer.prototype.createInstanceBuffer = function(instances) {
     // instanceID is 24bit
     // 8bits are used for geometry buffer index
     // 16bits are used for material buffer index
-    // TODO: what else can be put in here?
+    // we abuse instanceId to contain offsets to index the attribute and material buffers
+    // (possibly slower but cleaner) alternative is to use an offset buffer:
+    // offsetBuffer: {
+    //   attrIdx, matIdx, [instanceId=0]
+    //   attrIdx, matIdx  [instanceId=1]
+    // };
+    // e.g.
+    // attrBuffer[offsetBuffer[instanceId * 2 + 0x0]]
     {
       let instanceId = geometryInstance.layout["instanceId"];
       instanceId[0] = (materialId & 0x000000FF) >> 0;

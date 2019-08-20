@@ -19,6 +19,12 @@ global.VERBOSE = !!(
   process.argv.filter(v => v.match("--verbose-log"))[0]
 );
 
+// prefer to use diescrete gpu over integrated gpu
+global.PREFER_DISCRETE_GPU = !!(
+  process.env.npm_config_prefer_discrete_gpu ||
+  process.argv.filter(v => v.match("--prefer-discrete-gpu"))[0]
+);
+
 // material models
 const MATERIAL_MODEL = {
   EMISSIVE: 0,
@@ -84,13 +90,6 @@ RayTracingDemo.prototype.initialise = function() {
 RayTracingDemo.prototype.create = async function() {
   LOG("Initializing TinyObjLoader (WebAssembly)");
   await tolw.init();
-  /*{
-    LOG("Loading Textures");
-    let now = performance.now();
-    Textures["Bamboo-Wood-Semigloss-albedo"] = readPNGFile("assets/textures/bamboo-wood-semigloss/albedo.png");
-    let then = performance.now();
-    LOG(`Loading Textures took ${then - now}ms`);
-  }*/
   LOG("Creating window");
   this.window = this.createWindow();
   LOG("Creating Instance");
@@ -125,8 +124,8 @@ RayTracingDemo.prototype.execute = function() {
     window.onmouseup = e => (drag = false);
     window.onmousemove = e => {
       if (!drag) return;
-      camera.rotation.vx += -e.movementX;
-      camera.rotation.vy += -e.movementY;
+      camera.rotation.vx += -e.movementX * 0.725;
+      camera.rotation.vy += -e.movementY * 0.725;
       camera.resetSampleCount();
     };
     window.onmousewheel = e => {
@@ -158,8 +157,14 @@ RayTracingDemo.prototype.execute = function() {
 
 RayTracingDemo.prototype.loadGeometryFile = function(path) {
   let ext = path.substr(path.lastIndexOf("."));
-  if (ext !== ".obj") console.warn(`This Demo only supports Wavefront (.obj) files`);
+  if (ext !== ".obj") console.warn(`This Demo only supports Wavefront OBJ (.obj) as object files`);
   return this.addGeometryMesh(readObjectFile(path));
+};
+
+RayTracingDemo.prototype.loadTextureFile = function(path) {
+  let ext = path.substr(path.lastIndexOf("."));
+  if (ext !== ".png") console.warn(`This Demo only supports PNG (.png) as image files`);
+  return this.rayTracer.addTexture(readPNGFile(path));
 };
 
 RayTracingDemo.prototype.addGeometryMesh = function(geometry) {

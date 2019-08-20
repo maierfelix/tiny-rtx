@@ -12,7 +12,7 @@ struct RayPayload {
 layout(location = 0) rayPayloadInNV RayPayload Ray;
 
 void main() {
-  const float t = 0.5 * (normalize(gl_WorldRayDirectionNV).y + 1.0);
-  vec3 color = mix(vec3(0.25), vec3(0.375), t);
+  //const float t = 0.5 * (normalize(gl_WorldRayDirectionNV).y + 1.0);
+  vec3 color = vec3(0.0);
   Ray.colorAndDistance = vec4(ditherRGB(color, vec2(gl_LaunchIDNV.xy)), -1.0);
 }

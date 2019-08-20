@@ -48,10 +48,8 @@ hitAttributeNV vec3 attribs;
 
 void main() {
 
-  const uint instanceCustomIndex = (gl_InstanceCustomIndexNV);
-
-  const uint instanceId = (instanceCustomIndex >> 16) & 0xFF;
-  const uint materialId = (instanceCustomIndex >> 0) & 0xFFFF;
+  const uint instanceId = (gl_InstanceCustomIndexNV >> 16) & 0xFF;
+  const uint materialId = (gl_InstanceCustomIndexNV >> 0) & 0xFFFF;
 
   const uvec4 face = FaceArray[nonuniformEXT(instanceId)].Faces[gl_PrimitiveID];
 
@@ -69,45 +67,43 @@ void main() {
   const Material material = MaterialArray[materialId].material;
 
   const float IOR = material.IOR;
+  const vec3 color = material.color;
+  const uint materialModel = material.materialModel;
+
   const float NoR = dot(gl_WorldRayDirectionNV, normal);
 
   uint seed = Ray.seed;
-  switch (material.materialModel) {
+  switch (materialModel) {
     case EMISSIVE:
       Ray = RayPayload(
-        vec4(material.color, gl_HitTNV),
+        vec4(color, gl_HitTNV),
         vec4(1, 0, 0, 0),
         seed
       );
     break;
     case METALLIC:
       const vec3 reflected = reflect(gl_WorldRayDirectionNV, normal);
-      const bool isScattered = dot(reflected, normal) > 0;
-
-      const vec4 colorAndDistance = isScattered ? vec4(material.color, gl_HitTNV) : vec4(material.color, -1);
-
+      const bool isScattered = dot(reflected, normal) > 0.0;
       Ray = RayPayload(
-        isScattered ? vec4(material.color, gl_HitTNV) : vec4(material.color, -1),
-        vec4(reflected + IOR * randInUnitSphere(seed), isScattered ? 1 : 0),
+        isScattered ? vec4(color, gl_HitTNV) : vec4(0, 0, 0, -1),
+        vec4(reflected + IOR * randInUnitSphere(seed), float(isScattered)),
         seed
       );
     break;
     case DIELECTRIC:
       const bool outside = NoR > 0;
       const vec3 outer = outside ? -normal : normal;
-
       const vec3 refracted = refract(gl_WorldRayDirectionNV, outer, outside ? IOR : 1 / IOR);
       const float reflectProb = refracted != vec3(0) ? schlick(outside ? NoR * IOR : -NoR, IOR) : 1.0;
-
       if (randf01(seed) < reflectProb) {
-        Ray = RayPayload(vec4(material.color, gl_HitTNV), vec4(reflect(gl_WorldRayDirectionNV, normal), 1), seed);
+        Ray = RayPayload(vec4(color, gl_HitTNV), vec4(reflect(gl_WorldRayDirectionNV, normal), 1), seed);
       } else {
-        Ray = RayPayload(vec4(material.color, gl_HitTNV), vec4(refracted, 1), seed);
+        Ray = RayPayload(vec4(color, gl_HitTNV), vec4(refracted, 1), seed);
       }
     break;
     case LAMBERTIAN:
       const vec4 scatter = vec4(normal + randInUnitSphere(seed), float(NoR < 0));
-      Ray = RayPayload(vec4(material.color, gl_HitTNV), scatter, seed);
+      Ray = RayPayload(vec4(color, gl_HitTNV), scatter, seed);
     break;
   };
 
