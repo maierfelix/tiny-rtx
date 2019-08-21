@@ -1,4 +1,8 @@
-import { LOG, ASSERT_VK_RESULT } from "./utils.mjs";
+import { LOG, WARN, ASSERT_VK_RESULT } from "./utils.mjs";
+
+import {
+  isValidationLayerAvailable
+} from "./utils.mjs";
 
 import Surface from "./Surface.mjs";
 import Swapchain from "./Swapchain.mjs";
@@ -53,10 +57,6 @@ VulkanApplication.prototype.createInstance = function() {
 
   let extensions = window.getRequiredInstanceExtensions();
   extensions.push(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
-  /*LOG("Active Extensions:");
-  extensions.map(ext => {
-    LOG(` - Extension: ${ext}`);
-  });*/
 
   let applicationInfo = new VkApplicationInfo();
   applicationInfo.pApplicationName = "RTX";
@@ -65,8 +65,20 @@ VulkanApplication.prototype.createInstance = function() {
   applicationInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
   applicationInfo.apiVersion = VK_API_VERSION_1_1;
 
+  let layers = [];
+  for (let ii = 0; ii < validationLayers.length; ++ii) {
+    let layerName = validationLayers[ii];
+    if (isValidationLayerAvailable(layerName)) {
+      layers.push(layerName); 
+    } else {
+      WARN(`Excluding validation layer '${layerName}' since it is not available`);
+    }
+  };
+
   let instanceInfo = new VkInstanceCreateInfo();
   instanceInfo.pApplicationInfo = applicationInfo;
+  instanceInfo.enabledLayerCount = layers.length;
+  instanceInfo.ppEnabledLayerNames = layers;
   instanceInfo.enabledExtensionCount = extensions.length;
   instanceInfo.ppEnabledExtensionNames = extensions;
 
@@ -81,7 +93,7 @@ VulkanApplication.prototype.createPhysicalDevice = function() {
   let {requiredExtensions} = this;
   let physicalDevice = new PhysicalDevice({ instance, requiredExtensions });
   physicalDevice.create();
-  if (!physicalDevice) throw new Error(`No compatible physical device available!`);
+  if (!physicalDevice) throw new Error(`No compatible physical device available`);
   return physicalDevice;
 };
 
@@ -89,6 +101,10 @@ VulkanApplication.prototype.createLogicalDevice = function() {
   let {physicalDevice} = this;
   let {requiredExtensions} = this;
   let logicalDevice = new LogicalDevice({ physicalDevice, requiredExtensions });
+  LOG("Enabled Extensions:");
+  requiredExtensions.map(ext => {
+    LOG(` - ${ext}`);
+  });
   logicalDevice.create();
   return logicalDevice;
 };

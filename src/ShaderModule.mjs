@@ -1,5 +1,5 @@
 import fs from "fs";
-import {GLSL} from "nvk-essentials";
+import essentials from "nvk-essentials"; const {GLSL} = essentials;
 
 import { ASSERT_VK_RESULT } from "./utils.mjs";
 

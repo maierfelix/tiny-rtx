@@ -5,7 +5,7 @@ import glMatrix from "gl-matrix";
 import { performance } from "perf_hooks";
 
 import { LOG } from "./utils.mjs";
-import { readPNGFile, readObjectFile } from "./utils.mjs";
+import { __dirname, readPNGFile, readObjectFile } from "./utils.mjs";
 
 import RayTracer from "./RayTracer/index.mjs";
 import VulkanApplication from "./VulkanApplication.mjs";

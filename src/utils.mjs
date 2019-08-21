@@ -1,8 +1,10 @@
 import fs from "fs";
+import url from "url";
+import path from "path";
 import tolw from "tolw";
 import lodepng from "@cwasm/lodepng";
+import essentials from "nvk-essentials"; const {GLSL} = essentials;
 
-import { GLSL } from "nvk-essentials";
 
 global.result = null;
 export function ASSERT_VK_RESULT(result) {
@@ -72,3 +74,13 @@ export function validateValidationLayers(layers) {
 export function LOG() {
   if (global.VERBOSE) console.log.apply(console, arguments);
 };
+
+export function WARN() {
+  let args = "";
+  for (let ii = 0; ii < arguments.length; ++ii) {
+    args += arguments[ii].toString() + (ii < arguments.length - 1 ? " " : "");
+  };
+  console.log("\x1b[33m%s\x1b[0m", args);
+};
+
+export const __dirname = path.dirname(url.fileURLToPath(import.meta.url)) + "/../";
