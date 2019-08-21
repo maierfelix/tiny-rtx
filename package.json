@@ -9,6 +9,6 @@
     "gl-matrix": "^3.0.0",
     "nvk": "latest",
     "nvk-essentials": "latest",
-    "tolw": "^0.1.7"
+    "tolw": "latest"
   }
 }

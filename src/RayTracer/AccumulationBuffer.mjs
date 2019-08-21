@@ -16,7 +16,7 @@ AccumulationBuffer.prototype.create = function(width, height) {
 
   let surfaceFormat = VK_FORMAT_R32G32B32A32_SFLOAT;
 
-  this.createImage(
+  this.allocate(
     VK_IMAGE_TYPE_2D,
     VK_FORMAT_R32G32B32A32_SFLOAT,
     extent,

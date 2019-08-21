@@ -5,13 +5,13 @@ import CommandBuffer from "./CommandBuffer.mjs";
 export default class Buffer {
   constructor(opts) {
     this.instance = new VkBuffer();
+    this.memory = new VkDeviceMemory();
     this.logicalDevice = opts.logicalDevice;
     this.physicalDevice = (
       opts.physicalDevice ?
       opts.physicalDevice :
       opts.logicalDevice.physicalDevice
     );
-    this.memory = new VkDeviceMemory();
     this.data = null;
     this.mapped = null;
     this.byteLength = 0;

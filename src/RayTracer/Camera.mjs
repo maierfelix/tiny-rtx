@@ -109,7 +109,7 @@ Camera.prototype.transform = function() {
   distance.vz *= (SMOOTH_MOVEMENT + 0.125); // make distance change a bit smoother :)
 
   // accumulate only if camera is not moving at all
-  if ((rotation.vx + rotation.vy + distance.vz) !== 0) {
+  if ((Math.abs(rotation.vx) + Math.abs(rotation.vy) + Math.abs(distance.vz)) !== 0) {
     this.resetSampleCount();
   }
 

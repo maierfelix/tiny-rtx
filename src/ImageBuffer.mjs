@@ -33,7 +33,7 @@ ImageBuffer.prototype.destroy = function() {
   }
 };
 
-ImageBuffer.prototype.createImage = function(imageType, format, extent, tiling, usage, memoryProperties) {
+ImageBuffer.prototype.allocate = function(imageType, format, extent, tiling, usage, memoryProperties, arrayLayers = 1) {
   let {logicalDevice, physicalDevice} = this;
   let {memory, image, imageView} = this;
   let device = logicalDevice.instance;
@@ -43,7 +43,7 @@ ImageBuffer.prototype.createImage = function(imageType, format, extent, tiling, 
   imageCreateInfo.format = format;
   imageCreateInfo.extent = extent;
   imageCreateInfo.mipLevels = 1;
-  imageCreateInfo.arrayLayers = 1;
+  imageCreateInfo.arrayLayers = arrayLayers;
   imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
   imageCreateInfo.tiling = tiling;
   imageCreateInfo.usage = usage;

@@ -49,6 +49,7 @@ SceneGeometryBuffer.prototype.create = function(geometries, materials) {
       VK_BUFFER_USAGE_RAY_TRACING_BIT_NV,
       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
     );
+    // we no longer have to write to them
 
     attributeBuffer.copyToBuffer(stagedAttributeBuffer, 0x0, 0x0, attributeBuffer.byteLength);
     faceBuffer.copyToBuffer(stagedFaceBuffer, 0x0, 0x0, faceBuffer.byteLength);
@@ -127,6 +128,9 @@ SceneGeometryBuffer.prototype.createGeometryBuffer = function(geometry) {
     faces[offset + 2] = index + 2;
   };
 
+  attributeBuffer.unmap();
+  faceBuffer.unmap();
+
   return { attributeBuffer, faceBuffer };
 };
 
@@ -152,6 +156,8 @@ SceneGeometryBuffer.prototype.createMaterialBuffer = function(material) {
   uint32View[3] = material.materialModel;
   // IOR
   float32View[4] = material.IOR;
+
+  materialBuffer.unmap();
 
   return { materialBuffer };
 };

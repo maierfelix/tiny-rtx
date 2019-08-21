@@ -87,17 +87,84 @@ RayTracer.prototype.destroy = function() {
 RayTracer.prototype.addGeometry = function(mesh) {
   let {logicalDevice, physicalDevice} = this;
   let geometry = new AccelerationGeometry({ logicalDevice, physicalDevice });
+  // validate input
+  if (!mesh.hasOwnProperty("vertices")) {
+    throw new ReferenceError(`Mesh is missing a 'vertices' property`);
+  }
+  if (!mesh.hasOwnProperty("normals")) {
+    throw new ReferenceError(`Mesh is missing a 'normals' property`);
+  }
+  if (!mesh.hasOwnProperty("uvs")) {
+    throw new ReferenceError(`Mesh is missing a 'uvs' property`);
+  }
+  if (!mesh.hasOwnProperty("indices")) {
+    throw new ReferenceError(`Mesh is missing a 'indices' property`);
+  }
+  // validate types
+  if (!(mesh.vertices instanceof Float32Array)) {
+    throw new TypeError(`Mesh requires 'vertices' property to be of type 'Float32Array'`);
+  }
+  if (!(mesh.normals instanceof Float32Array)) {
+    throw new TypeError(`Mesh requires 'normals' property to be of type 'Float32Array'`);
+  }
+  if (!(mesh.uvs instanceof Float32Array)) {
+    throw new TypeError(`Mesh requires 'uvs' property to be of type 'Float32Array'`);
+  }
+  if (!(mesh.indices instanceof Uint32Array)) {
+    throw new TypeError(`Mesh requires 'indices' property to be of type 'Uint32Array'`);
+  }
   geometry.create(mesh);
   this.geometries.push(geometry);
   return geometry;
 };
 
 RayTracer.prototype.addMaterial = function(material) {
+  // validate input
+  if (!material.hasOwnProperty("color")) {
+    throw new ReferenceError(`Material is missing a 'width' property`);
+  }
+  if (!material.hasOwnProperty("materialModel")) {
+    throw new ReferenceError(`Material is missing a 'materialModel' property`);
+  }
+  if (!material.hasOwnProperty("IOR")) {
+    throw new ReferenceError(`Material is missing a 'IOR' property`);
+  }
+  // validate input types
+  if (!(material.color instanceof Float32Array)) {
+    throw new TypeError(`Material requires 'color' property to be of type 'Float32Array'`);
+  }
+  if (!Number.isInteger(material.materialModel)) {
+    throw new TypeError(`Material requires 'materialModel' property to be of type 'Integer'`);
+  }
+  if (!Number.isFinite(material.IOR)) {
+    throw new TypeError(`Material requires 'IOR' property to be of type 'Float'`);
+  }
   this.materials.push(material);
   return material;
 };
 
 RayTracer.prototype.addTexture = function(texture) {
+  // validate input
+  if (!texture.hasOwnProperty("width")) {
+    throw new ReferenceError(`Texture is missing a 'width' property`);
+  }
+  if (!texture.hasOwnProperty("height")) {
+    throw new ReferenceError(`Texture is missing a 'height' property`);
+  }
+  if (!texture.hasOwnProperty("data")) {
+    throw new ReferenceError(`Texture is missing a 'data' property`);
+  }
+  // validate input types
+  if (!Number.isInteger(texture.width)) {
+    throw new TypeError(`Texture requires 'width' property to be of type 'Integer'`);
+  }
+  if (!Number.isInteger(texture.height)) {
+    throw new TypeError(`Texture requires 'height' property to be of type 'Integer'`);
+  }
+  if (!(texture.data instanceof Uint8ClampedArray)) {
+    throw new TypeError(`Texture requires 'data' property to be of type 'Uint8ClampedArray'`);
+  }
+  texture.offset = 0x0;
   this.textures.push(texture);
   return texture;
 };

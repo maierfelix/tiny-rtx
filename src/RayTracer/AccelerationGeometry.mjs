@@ -97,6 +97,20 @@ AccelerationGeometry.prototype.allocate = function(mesh) {
 };
 
 AccelerationGeometry.prototype.addInstance = function(data) {
+  // validate input
+  if (!data.hasOwnProperty("transform")) {
+    throw new ReferenceError(`Geometry Instance is missing a 'transform' property`);
+  }
+  if (!data.hasOwnProperty("material")) {
+    throw new ReferenceError(`Geometry Instance is missing a 'material' property`);
+  }
+  // validate input types
+  if (!(data.transform instanceof Float32Array)) {
+    throw new TypeError(`Geometry Instance requires 'transform' property to be of type 'Float32Array'`);
+  }
+  if (data.transform.length !== (3 * 4)) {
+    throw new TypeError(`Geometry Instance requires 'transform' property to be a 3x4 Matrix`);
+  }
   let instance = new AccelerationGeometry.GeometryInstance(this, data);
   this.instances.push(instance);
 };

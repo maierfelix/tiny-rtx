@@ -13,7 +13,9 @@ const TEXTURE_PATH = "textures/";
 
   let Demo = new RayTracingDemo();
 
-  await Demo.create();
+  await Demo.create({
+    textureDimension: 4096 // all used textures must be 4096x4096
+  });
 
   /* Load all required Geometries*/
   let Box = Demo.loadGeometryFile(ASSET_PATH + MODEL_PATH + "box.obj");
@@ -23,7 +25,7 @@ const TEXTURE_PATH = "textures/";
   let CubeEdges = Demo.loadGeometryFile(ASSET_PATH + MODEL_PATH + "cube-edges.obj");
 
   /* Load all required Textures */
-  //let BambooTexture = Demo.loadTextureFile(ASSET_PATH + TEXTURE_PATH + "bamboo-wood-semigloss/albedo.png");
+  let BambooTexture = Demo.loadTextureFile(ASSET_PATH + TEXTURE_PATH + "bamboo-wood-semigloss/albedo.png");
 
   /* Create all Geometry instances */
 

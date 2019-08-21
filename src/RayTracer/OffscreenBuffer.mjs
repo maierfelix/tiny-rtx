@@ -14,7 +14,7 @@ OffscreenBuffer.prototype.create = function(width, height, depth, surfaceFormat)
   extent.height = height;
   extent.depth = depth;
 
-  this.createImage(
+  this.allocate(
     VK_IMAGE_TYPE_2D,
     surfaceFormat,
     extent,
