@@ -4,7 +4,7 @@ import path from "path";
 import tolw from "tolw";
 import lodepng from "@cwasm/lodepng";
 import essentials from "nvk-essentials"; const {GLSL} = essentials;
-
+import OBJ from "webgl-obj-loader";
 
 global.result = null;
 export function ASSERT_VK_RESULT(result) {
@@ -37,7 +37,16 @@ export function readBinaryFile(path) {
 export function readObjectFile(path) {
   LOG(`Reading Object File from '${path}'`);
   let binaryFile = readBinaryFile(path);
-  let object = tolw.loadObj(binaryFile);
+  //let object = tolw.loadObj(binaryFile);
+  let object = new OBJ.Mesh(fs.readFileSync(path, "utf-8"));
+  object.calculateTangentsAndBitangents();
+  object = {
+    vertices: new Float32Array(object.vertices),
+    normals: new Float32Array(object.vertexNormals),
+    tangents: new Float32Array(object.tangents),
+    uvs: new Float32Array(object.textures),
+    indices: new Uint32Array(object.indices)
+  };
   return object;
 };
 

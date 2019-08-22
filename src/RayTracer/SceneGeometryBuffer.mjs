@@ -12,13 +12,12 @@ export default class SceneGeometryBuffer {
       faces: [],
       materials: []
     };
-    this.instances = [];
     this.logicalDevice = opts.logicalDevice;
     this.physicalDevice = opts.physicalDevice;
   }
 };
 
-SceneGeometryBuffer.prototype.create = function(geometries, materials) {
+SceneGeometryBuffer.prototype.create = function(geometries, materials, textures) {
   let {logicalDevice, physicalDevice} = this;
   let {buffers} = this;
 
@@ -67,7 +66,7 @@ SceneGeometryBuffer.prototype.create = function(geometries, materials) {
   // which gets later indexed in the shader using 'gl_InstanceCustomIndexNV'
   for (let ii = 0; ii < materials.length; ++ii) {
     // create host visible geometry buffer
-    let {materialBuffer} = this.createMaterialBuffer(materials[ii]);
+    let {materialBuffer} = this.createMaterialBuffer(materials[ii], textures);
 
     // stage the buffers over to the device
     let stagedMaterialBuffer = new Buffer({ logicalDevice, physicalDevice });
@@ -92,12 +91,12 @@ SceneGeometryBuffer.prototype.create = function(geometries, materials) {
 
 SceneGeometryBuffer.prototype.createGeometryBuffer = function(geometry) {
   let {logicalDevice, physicalDevice} = this;
-  let {normals, indices} = geometry.mesh;
+  let {uvs, normals, tangents, indices} = geometry.mesh;
 
   // allocate
   let attributeBuffer = new Buffer({ logicalDevice, physicalDevice });
   attributeBuffer.allocate(
-    new Float32Array(indices.length * 4),
+    new Float32Array(indices.length * 12),
     VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
   );
@@ -112,10 +111,20 @@ SceneGeometryBuffer.prototype.createGeometryBuffer = function(geometry) {
   let attributes = new Float32Array(attributeBuffer.mapped);
   for (let ii = 0; ii < indices.length; ++ii) {
     let index = indices[ii];
-    let offset = ii * 4;
-    attributes[offset + 0] = normals[index * 3 + 0];
-    attributes[offset + 1] = normals[index * 3 + 1];
-    attributes[offset + 2] = normals[index * 3 + 2];
+    let offset = ii * 12;
+    attributes[offset++] = normals[index * 3 + 0];
+    attributes[offset++] = normals[index * 3 + 1];
+    attributes[offset++] = normals[index * 3 + 2];
+    attributes[offset++] = 0;
+    attributes[offset++] = tangents[index * 3 + 0];
+    attributes[offset++] = tangents[index * 3 + 1];
+    attributes[offset++] = tangents[index * 3 + 2];
+    attributes[offset++] = 0;
+    attributes[offset++] = uvs[index * 2 + 0];
+    attributes[offset++] = 1.0 - uvs[index * 2 + 1];
+    //attributes[offset++] = 0;
+    //attributes[offset++] = 0;
+    // skip these, but it's still 12*4 bytes
   };
 
   // write faces directly into the mapped buffer
@@ -123,9 +132,9 @@ SceneGeometryBuffer.prototype.createGeometryBuffer = function(geometry) {
   for (let ii = 0; ii < indices.length / 3; ++ii) {
     let index = ii * 3;
     let offset = ii * 4;
-    faces[offset + 0] = index + 0;
-    faces[offset + 1] = index + 1;
-    faces[offset + 2] = index + 2;
+    faces[offset++] = index + 0;
+    faces[offset++] = index + 1;
+    faces[offset++] = index + 2;
   };
 
   attributeBuffer.unmap();
@@ -134,7 +143,7 @@ SceneGeometryBuffer.prototype.createGeometryBuffer = function(geometry) {
   return { attributeBuffer, faceBuffer };
 };
 
-SceneGeometryBuffer.prototype.createMaterialBuffer = function(material) {
+SceneGeometryBuffer.prototype.createMaterialBuffer = function(material, textures) {
   let {logicalDevice, physicalDevice} = this;
 
   // allocate
@@ -144,6 +153,17 @@ SceneGeometryBuffer.prototype.createMaterialBuffer = function(material) {
     VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
   );
+
+  // first texture is empty (used when a material has no texture assigned)
+  let textureIndex = -1;
+  if (material.texture !== void 0) {
+    textureIndex = textures.indexOf(material.texture) + 1;
+    if (textureIndex <= -1) {
+      throw new ReferenceError(`Material Texture is invalid or was never created`);
+    }
+  } else {
+    textureIndex = 0;
+  }
 
   // write material
   let uint32View = new Uint32Array(materialBuffer.mapped);
@@ -156,6 +176,8 @@ SceneGeometryBuffer.prototype.createMaterialBuffer = function(material) {
   uint32View[3] = material.materialModel;
   // IOR
   float32View[4] = material.IOR;
+  // textureIndex
+  uint32View[5] = textureIndex;
 
   materialBuffer.unmap();
 

@@ -17,15 +17,18 @@ struct RayPayload {
 };
 
 struct Vertex {
-  vec3 normal;
-  float pad0;
+  vec4 normal;
+  vec4 tangent;
+  vec2 uv;
+  vec2 pad_0;
 };
 
 struct Material {
   vec3 color;
   uint materialModel;
   float IOR;
-  vec3 pad0; // meh
+  uint textureIndex;
+  vec2 pad0;
 };
 
 layout(location = 0) rayPayloadInNV RayPayload Ray;
@@ -44,7 +47,9 @@ layout(binding = 6, set = 0, std430) readonly buffer MaterialBuffer {
   Material material;
 } MaterialArray[];
 
-hitAttributeNV vec3 attribs;
+layout (binding = 7, set = 0) uniform sampler2DArray textureArray;
+
+hitAttributeNV vec2 attribs;
 
 void main() {
 
@@ -57,18 +62,21 @@ void main() {
   const Vertex v1 = AttributeArray[nonuniformEXT(instanceId)].VertexAttribs[int(face.y)];
   const Vertex v2 = AttributeArray[nonuniformEXT(instanceId)].VertexAttribs[int(face.z)];
 
-  const vec3 n0 = v0.normal.xyz;
-  const vec3 n1 = v1.normal.xyz;
-  const vec3 n2 = v2.normal.xyz;
+  const vec2 u0 = v0.uv.xy, u1 = v1.uv.xy, u2 = v2.uv.xy;
+  const vec3 n0 = v0.normal.xyz, n1 = v1.normal.xyz, n2 = v2.normal.xyz;
 
-  const vec3 barycentrics = vec3(1.0f - attribs.x - attribs.y, attribs.x, attribs.y);
-  const vec3 normal = normalize(n0 * barycentrics.x + n1 * barycentrics.y + n2 * barycentrics.z);
+  const vec2 uv = blerp(attribs, u0.xy, u1.xy, u2.xy);
+  const vec3 normal = blerp(attribs, n0.xyz, n1.xyz, n2.xyz);
 
   const Material material = MaterialArray[materialId].material;
 
-  const float IOR = material.IOR;
-  const vec3 color = material.color;
   const uint materialModel = material.materialModel;
+  const float IOR = material.IOR;
+  const uint textureIndex = material.textureIndex;
+
+  const vec3 color = (
+    textureIndex > 0 ? texture(textureArray, vec3(uv, textureIndex)).rgb : vec3(0)
+  ) + material.color;
 
   const float NoR = dot(gl_WorldRayDirectionNV, normal);
 

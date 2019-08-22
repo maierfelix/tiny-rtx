@@ -13,132 +13,35 @@ const TEXTURE_PATH = "textures/";
 
   let Demo = new RayTracingDemo();
 
-  await Demo.create({
-    textureDimension: 4096 // all used textures must be 4096x4096
-  });
+  await Demo.create();
 
   /* Load all required Geometries*/
-  let Box = Demo.loadGeometryFile(ASSET_PATH + MODEL_PATH + "box.obj");
-  let Cube = Demo.loadGeometryFile(ASSET_PATH + MODEL_PATH + "cube.obj");
-  let Plane = Demo.loadGeometryFile(ASSET_PATH + MODEL_PATH + "plane.obj");
-  let Sphere = Demo.loadGeometryFile(ASSET_PATH + MODEL_PATH + "sphere.obj");
-  let CubeEdges = Demo.loadGeometryFile(ASSET_PATH + MODEL_PATH + "cube-edges.obj");
+
+  let Head = Demo.loadGeometryFile(ASSET_PATH + MODEL_PATH + "head/untitled.obj");
 
   /* Load all required Textures */
-  let BambooTexture = Demo.loadTextureFile(ASSET_PATH + TEXTURE_PATH + "bamboo-wood-semigloss/albedo.png");
+  let HeadTexture = Demo.loadTextureFile(ASSET_PATH + TEXTURE_PATH + "head/albedo.png");
+  //let NormalTexture = Demo.loadTextureFile(ASSET_PATH + TEXTURE_PATH + "head/normal.png");
+  //let BambooTexture = Demo.loadTextureFile(ASSET_PATH + TEXTURE_PATH + "bamboo-wood-semigloss/albedo.png");
+
+  /* Load skybox texture */
+  Demo.useSkyboxTexture(Demo.loadTextureFile(ASSET_PATH + TEXTURE_PATH + "skybox/misty_pines_4k.png"));
 
   /* Create all Geometry instances */
 
-  /* Generate a scene with random metal and glowing balls */
-
-  Sphere.addInstance({
+  Head.addInstance({
     transform: new Float32Array([
-      2.5, 0.0, 0.0, 4.0,
-      0.0, 2.5, 0.0, -2.0,
-      0.0, 0.0, 2.5, 0.0
+      24.0, 0.0, 0.0, 0.0,
+      0.0, 24.0, 0.0, -6.0,
+      0.0, 0.0, 24.0, 0.0
     ]),
     material: Demo.addMaterial({
-      color: new Float32Array([1.0, 1.0, 1.0]),
-      materialModel: MATERIAL_MODEL.METALLIC,
-      IOR: 0.09175
+      color: new Float32Array([0.0, 0.0, 0.0]),
+      materialModel: MATERIAL_MODEL.DIELECTRIC,
+      IOR: 1.29175,
+      texture: HeadTexture
     })
   });
-
-  Cube.addInstance({
-    transform: new Float32Array([
-      1.75, 0.0, 0.0, 4.0,
-      0.0, 3.5, 0.0, -4.475,
-      0.0, 0.0, 1.75, -4.0
-    ]),
-    material: Demo.addMaterial({
-      color: new Float32Array([1.0, 1.0, 1.0]),
-      materialModel: MATERIAL_MODEL.METALLIC,
-      IOR: 0.01175
-    })
-  });
-
-  Cube.addInstance({
-    transform: new Float32Array([
-      1.75, 0.0, 0.0, 4.0,
-      0.0, 0.01, 0.0, -7.975,
-      0.0, 0.0, 1.75, -4.0
-    ]),
-    material: Demo.addMaterial({
-      color: new Float32Array([0.0, 2.0, 3.0]),
-      materialModel: MATERIAL_MODEL.EMISSIVE,
-      IOR: 0.0
-    })
-  });
-
-  Cube.addInstance({
-    transform: new Float32Array([
-      1.75, 0.0, 0.0, 4.0,
-      0.0, 0.01, 0.0, -7.975,
-      0.0, 0.0, 1.75, 4.0
-    ]),
-    material: Demo.addMaterial({
-      color: new Float32Array([0.0, 2.0, 3.0]),
-      materialModel: MATERIAL_MODEL.EMISSIVE,
-      IOR: 0.0
-    })
-  });
-
-  // "cornell box"
-  Box.addInstance({
-    transform: new Float32Array([
-      8.0, 0.0, 0.0, 0.0,
-      0.0, 8.0, 0.0, 0.0,
-      0.0, 0.0, 8.0, 0.0
-    ]),
-    material: Demo.addMaterial({
-      color: new Float32Array([0.55, 0.55, 0.55]),
-      materialModel: MATERIAL_MODEL.METALLIC,
-      IOR: 0.000125
-    })
-  });
-  CubeEdges.addInstance({
-    transform: new Float32Array([
-      8.01, 0.0, 0.0, 0.0,
-      0.0, 8.01, 0.0, 0.0,
-      0.0, 0.0, 8.01, 0.0
-    ]),
-    material: Demo.addMaterial({
-      color: new Float32Array([0.0, 2.0, 3.0]),
-      materialModel: MATERIAL_MODEL.EMISSIVE,
-      IOR: 0.0
-    })
-  });
-
-  Box.addInstance({
-    transform: new Float32Array([
-      0.1, 0.0, 0.0, -64.0,
-      0.0, 6.0, 0.0, 0.0,
-      0.0, 0.0, 6.0, 0.0
-    ]),
-    material: Demo.addMaterial({
-      color: new Float32Array([0.0, 2.0, 3.0]),
-      materialModel: MATERIAL_MODEL.EMISSIVE,
-      IOR: 0.0
-    })
-  });
-
-  // add some random light balls to the scene
-  for (let ii = 0; ii < 16; ++ii) {
-    let z = ii;
-    // string
-    Cube.addInstance({
-      transform: new Float32Array([
-        0.0275, 0.0, 0.0, -64,
-        0.0, 1024.0, 0.0, 512.0,
-        0.0, 0.0, 0.0275, z - 8
-      ]),
-      material: Demo.addMaterial({
-        color: new Float32Array([0.0, 2.0, 3.0]),
-        materialModel: MATERIAL_MODEL.EMISSIVE,
-        IOR: 0.0
-      })
-    });
-  };
 
   /* Run the ray tracer */
   Demo.execute();

@@ -111,5 +111,7 @@ assets/models/sphere-holed.obj
 assets/models/webcam.obj
 
 assets/textures/*/*.png
+assets/textures/*/*.jpg
 
 assets/models/*.mtl
+assets/models/head

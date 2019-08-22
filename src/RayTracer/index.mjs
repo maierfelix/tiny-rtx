@@ -16,16 +16,16 @@ import OffscreenBuffer from "./OffscreenBuffer.mjs";
 import AccumulationBuffer from "./AccumulationBuffer.mjs";
 import SceneTextureBuffer from "./SceneTextureBuffer.mjs";
 import SceneGeometryBuffer from "./SceneGeometryBuffer.mjs";
+import SceneInstanceBuffer from "./SceneInstanceBuffer.mjs";
 
 import AccelerationGeometry from "./AccelerationGeometry.mjs";
 import AccelerationStructure from "./AccelerationStructure.mjs";
-
-import GeometryLayout from "./layouts/GeometryLayout.mjs";
 
 const MAX_RAY_RECURSION = 4;
 
 export default class RayTracer {
   constructor(opts = {}) {
+    this.application = opts.application;
     this.logicalDevice = opts.logicalDevice;
     this.physicalDevice = opts.physicalDevice;
     this.window = opts.window;
@@ -78,6 +78,7 @@ RayTracer.prototype.create = function() {
   this.pipeline.createDescriptorSets(this.accelerationStructures.top);
   LOG("Recording Draw Commands");
   this.recordDrawCommands();
+  LOG("Done");
 };
 
 RayTracer.prototype.destroy = function() {
@@ -94,6 +95,9 @@ RayTracer.prototype.addGeometry = function(mesh) {
   if (!mesh.hasOwnProperty("normals")) {
     throw new ReferenceError(`Mesh is missing a 'normals' property`);
   }
+  if (!mesh.hasOwnProperty("tangents")) {
+    throw new ReferenceError(`Mesh is missing a 'tangents' property`);
+  }
   if (!mesh.hasOwnProperty("uvs")) {
     throw new ReferenceError(`Mesh is missing a 'uvs' property`);
   }
@@ -106,6 +110,9 @@ RayTracer.prototype.addGeometry = function(mesh) {
   }
   if (!(mesh.normals instanceof Float32Array)) {
     throw new TypeError(`Mesh requires 'normals' property to be of type 'Float32Array'`);
+  }
+  if (!(mesh.tangents instanceof Float32Array)) {
+    throw new TypeError(`Mesh requires 'tangents' property to be of type 'Float32Array'`);
   }
   if (!(mesh.uvs instanceof Float32Array)) {
     throw new TypeError(`Mesh requires 'uvs' property to be of type 'Float32Array'`);
@@ -169,22 +176,6 @@ RayTracer.prototype.addTexture = function(texture) {
   return texture;
 };
 
-RayTracer.prototype.getGeometryInstanceId = function(geometry) {
-  let {geometries} = this;
-  for (let ii = 0; ii < geometries.length; ++ii) {
-    if (geometry === geometries[ii]) return ii;
-  };
-  return -1;
-};
-
-RayTracer.prototype.getMaterialInstanceId = function(material) {
-  let {materials} = this;
-  for (let ii = 0; ii < materials.length; ++ii) {
-    if (material === materials[ii]) return ii;
-  };
-  return -1;
-};
-
 RayTracer.prototype.getGeometryInstances = function() {
   let {geometries} = this;
   let instances = [];
@@ -195,6 +186,17 @@ RayTracer.prototype.getGeometryInstances = function() {
     };
   };
   return instances;
+};
+
+RayTracer.prototype.getUniqueMaterialTextures = function() {
+  let {materials} = this;
+  let textures = [];
+  for (let ii = 0; ii < materials.length; ++ii) {
+    let {texture} = materials[ii];
+    if (!texture) continue;
+    if (textures.indexOf(texture) <= -1) textures.push(texture);
+  };
+  return textures;
 };
 
 RayTracer.prototype.buildAccelerationStructures = function() {
@@ -235,7 +237,7 @@ RayTracer.prototype.buildAccelerationStructures = function() {
     asInfo.instanceCount = instanceCount;
     asInfo.geometryCount = 0;
     asInfo.pGeometries = null;
-    vkCmdBuildAccelerationStructureNV(commandBuffer.instance, asInfo, accelerationStructure.instanceBuffer.instance, 0, false, accelerationStructure.instance, null, scratchBuffer.instance, scratchBufferOffset);
+    vkCmdBuildAccelerationStructureNV(commandBuffer.instance, asInfo, accelerationStructure.instanceBuffer.buffer.instance, 0, false, accelerationStructure.instance, null, scratchBuffer.instance, scratchBufferOffset);
   };
   vkCmdPipelineBarrier(commandBuffer.instance, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_NV, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_NV, 0, 1, [memoryBarrier], 0, null, 0, null);
 
@@ -254,9 +256,17 @@ RayTracer.prototype.buildAccelerationStructures = function() {
 
 RayTracer.prototype.createPipeline = function() {
   let {logicalDevice} = this;
+  let {camera, shaderBindingTable} = this;
   let {offscreenBuffer, accumulationBuffer} = this;
-  let {camera, shaderBindingTable, sceneGeometryBuffer} = this;
-  let pipeline = new Pipeline({ logicalDevice, offscreenBuffer, accumulationBuffer, shaderBindingTable, sceneGeometryBuffer });
+  let {sceneGeometryBuffer, sceneTextureBuffer} = this;
+  let pipeline = new Pipeline({
+    logicalDevice,
+    shaderBindingTable,
+    offscreenBuffer,
+    accumulationBuffer,
+    sceneGeometryBuffer,
+    sceneTextureBuffer
+  });
   pipeline.create();
   pipeline.addUniformBuffer(camera);
   return pipeline;
@@ -329,17 +339,19 @@ RayTracer.prototype.createShaders = function() {
 
 RayTracer.prototype.createSceneTextureBuffer = function() {
   let {logicalDevice, physicalDevice} = this;
-  let {textures} = this;
+  let {application} = this;
+  let textures = this.getUniqueMaterialTextures();
   let sceneTextureBuffer = new SceneTextureBuffer({ logicalDevice, physicalDevice });
-  sceneTextureBuffer.create(textures);
+  sceneTextureBuffer.create(textures, application.skyboxTexture);
   return sceneTextureBuffer;
 };
 
 RayTracer.prototype.createSceneGeometryBuffer = function() {
   let {logicalDevice, physicalDevice} = this;
   let {geometries, materials} = this;
+  let textures = this.getUniqueMaterialTextures();
   let sceneGeometryBuffer = new SceneGeometryBuffer({ logicalDevice, physicalDevice });
-  sceneGeometryBuffer.create(geometries, materials);
+  sceneGeometryBuffer.create(geometries, materials, textures);
   return sceneGeometryBuffer;
 };
 
@@ -379,7 +391,7 @@ RayTracer.prototype.createBottomLevelAccelerationStructures = function() {
 
 RayTracer.prototype.createTopLevelAccelerationStructure = function() {
   let {logicalDevice, physicalDevice} = this;
-  let {geometries, accelerationStructures} = this;
+  let {accelerationStructures} = this;
 
   // flat array of all active geometry instances
   let instances = this.getGeometryInstances();
@@ -406,65 +418,10 @@ RayTracer.prototype.createTopLevelAccelerationStructure = function() {
 
 RayTracer.prototype.createInstanceBuffer = function(instances) {
   let {logicalDevice, physicalDevice} = this;
-
-  // create instance buffer for top-level AS
-  let geometryInstance = new GeometryLayout();
-  let geometryInstanceBuffer = new Uint8Array(instances.length * geometryInstance.byteLength);
-
-  let offset = 0x0;
-  for (let ii = 0; ii < instances.length; ++ii) {
-    let {geometry, material, transform} = instances[ii];
-    let geometryId = this.getGeometryInstanceId(geometry) & 0xFF;
-    let materialId = this.getMaterialInstanceId(material) & 0xFFFF;
-    geometryInstance.set("mask", 0xFF);
-    geometryInstance.set("flags", VK_GEOMETRY_INSTANCE_TRIANGLE_CULL_DISABLE_BIT_NV);
-    geometryInstance.set("transform", transform);
-    // instanceID is 24bit
-    // 8bits are used for geometry buffer index
-    // 16bits are used for material buffer index
-    // we abuse instanceId to contain offsets to index the attribute and material buffers
-    // (possibly slower but cleaner) alternative is to use an offset buffer:
-    // offsetBuffer: {
-    //   attrIdx, matIdx, [instanceId=0]
-    //   attrIdx, matIdx  [instanceId=1]
-    // };
-    // e.g.
-    // attrBuffer[offsetBuffer[instanceId * 2 + 0x0]]
-    {
-      let instanceId = geometryInstance.layout["instanceId"];
-      instanceId[0] = (materialId & 0x000000FF) >> 0;
-      instanceId[1] = (materialId & 0x0000FF00) >> 8;
-      instanceId[2] = (geometryId & 0xFF);
-    }
-    geometryInstance.set("instanceOffset", 0x0);
-    geometryInstance.set("accelerationStructureHandle", geometry.accelerationStructure.handle);
-    geometryInstanceBuffer.set(geometryInstance.view, offset);
-    offset += geometryInstance.byteLength;
-  };
-
-  let instanceBuffer = new Buffer({ logicalDevice, physicalDevice });
-  instanceBuffer.allocate(
-    geometryInstanceBuffer,
-    VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-  );
-
-  let stagedInstanceBuffer = new Buffer({ logicalDevice, physicalDevice });
-  stagedInstanceBuffer.allocate(
-    instanceBuffer.byteLength,
-    // aka: SSBO for RT
-    VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-    VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-    VK_BUFFER_USAGE_RAY_TRACING_BIT_NV,
-    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-  );
-
-  instanceBuffer.copyToBuffer(stagedInstanceBuffer, 0x0, 0x0, instanceBuffer.byteLength);
-
-  // and finally free the host visible buffers
-  instanceBuffer.destroy();
-
-  return stagedInstanceBuffer;
+  let {geometries, materials} = this;
+  let sceneInstanceBuffer = new SceneInstanceBuffer({ logicalDevice, physicalDevice });
+  sceneInstanceBuffer.create(geometries, materials, instances);
+  return sceneInstanceBuffer;
 };
 
 RayTracer.prototype.recordDrawCommands = function() {

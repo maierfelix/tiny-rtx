@@ -6,7 +6,7 @@ import CameraLayout from "./layouts/CameraLayout.mjs";
 
 const NEAR = 0.01;
 const FAR = 8192.0;
-const FOV = (35.0 * Math.PI) / 180;
+const FOV = (45.0 * Math.PI) / 180;
 const APERTURE = 0.0275;
 const FOCUS_DISTANCE = 16.0;
 const SMOOTH_MOVEMENT = 0.65;
@@ -93,7 +93,7 @@ Camera.prototype.transform = function() {
   let mModel = this.modelMatrix;
   let mProjection = this.projectionMatrix;
 
-  let translation = vec3.fromValues(-1, 3, distance.z);
+  let translation = vec3.fromValues(0, 0, distance.z);
 
   mat4.identity(mModel);
   mat4.translate(mModel, mModel, translation);
