@@ -17,6 +17,7 @@ import AccumulationBuffer from "./AccumulationBuffer.mjs";
 import SceneTextureBuffer from "./SceneTextureBuffer.mjs";
 import SceneGeometryBuffer from "./SceneGeometryBuffer.mjs";
 import SceneInstanceBuffer from "./SceneInstanceBuffer.mjs";
+import SceneInstanceOffsetBuffer from "./SceneInstanceOffsetBuffer.mjs";
 
 import AccelerationGeometry from "./AccelerationGeometry.mjs";
 import AccelerationStructure from "./AccelerationStructure.mjs";
@@ -36,8 +37,9 @@ export default class RayTracer {
     this.offscreenBuffer = null;
     this.accumulationBuffer = null;
     this.shaderBindingTable = null;
-    this.sceneGeometryBuffer = null;
     this.sceneTextureBuffer = null;
+    this.sceneGeometryBuffer = null;
+    this.sceneInstanceOffsetBuffer = null;
     this.pipeline = null;
     this.geometries = [];
     this.materials = [];
@@ -47,6 +49,30 @@ export default class RayTracer {
       bottom: []
     };
   }
+
+  get instances() {
+    let {geometries} = this;
+    let instances = [];
+    for (let ii = 0; ii < geometries.length; ++ii) {
+      let geometry = geometries[ii];
+      for (let jj = 0; jj < geometry.instances.length; ++jj) {
+        instances.push(geometry.instances[jj]);
+      };
+    };
+    return instances;
+  }
+
+  get materialTextures() {
+    let {materials} = this;
+    let textures = [];
+    for (let ii = 0; ii < materials.length; ++ii) {
+      let {texture} = materials[ii];
+      if (!texture) continue;
+      if (textures.indexOf(texture) <= -1) textures.push(texture);
+    };
+    return textures;
+  }
+
 };
 
 RayTracer.prototype.create = function() {
@@ -54,6 +80,8 @@ RayTracer.prototype.create = function() {
   this.sceneTextureBuffer = this.createSceneTextureBuffer();
   LOG("Creating Scene Geometry Buffer");
   this.sceneGeometryBuffer = this.createSceneGeometryBuffer();
+  LOG("Creating Scene Instance Offset Buffer");
+  this.sceneInstanceOffsetBuffer = this.createSceneInstanceOffsetBuffer();
   LOG("Creating Bottom-Level Acceleration Structures");
   this.createBottomLevelAccelerationStructures();
   LOG("Creating Top-Level Acceleration Structures");
@@ -176,100 +204,32 @@ RayTracer.prototype.addTexture = function(texture) {
   return texture;
 };
 
-RayTracer.prototype.getGeometryInstances = function() {
-  let {geometries} = this;
-  let instances = [];
-  for (let ii = 0; ii < geometries.length; ++ii) {
-    let geometry = geometries[ii];
-    for (let jj = 0; jj < geometry.instances.length; ++jj) {
-      instances.push(geometry.instances[jj]);
-    };
-  };
-  return instances;
+RayTracer.prototype.createCamera = function() {
+  let {window, logicalDevice, physicalDevice} = this;
+  let camera = new Camera({ window, logicalDevice, physicalDevice });
+  camera.create();
+  return camera;
 };
 
-RayTracer.prototype.getUniqueMaterialTextures = function() {
-  let {materials} = this;
-  let textures = [];
-  for (let ii = 0; ii < materials.length; ++ii) {
-    let {texture} = materials[ii];
-    if (!texture) continue;
-    if (textures.indexOf(texture) <= -1) textures.push(texture);
-  };
-  return textures;
-};
-
-RayTracer.prototype.buildAccelerationStructures = function() {
-  let {logicalDevice, physicalDevice} = this;
-  let {accelerationStructures} = this;
-
-  let commandBuffer = new CommandBuffer({ logicalDevice });
-  commandBuffer.create(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
-  commandBuffer.begin();
-
-  let memoryBarrier = new VkMemoryBarrier();
-  memoryBarrier.srcAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_NV | VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_NV;
-  memoryBarrier.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_NV | VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_NV;
-
-  let {top, bottom} = accelerationStructures;
-
-  // build bottom-level AS
-  for (let ii = 0; ii < bottom.length; ++ii) {
-    let accelerationStructure = bottom[ii];
-    let {geometries, instanceCount} = accelerationStructure;
-    let {scratchBuffer, scratchBufferOffset} = accelerationStructure;
-    let asInfo = new VkAccelerationStructureInfoNV();
-    asInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_NV;
-    asInfo.instanceCount = instanceCount;
-    asInfo.geometryCount = geometries.length;
-    asInfo.pGeometries = geometries.map(g => g.geometry);
-    vkCmdBuildAccelerationStructureNV(commandBuffer.instance, asInfo, null, 0, false, accelerationStructure.instance, null, scratchBuffer.instance, scratchBufferOffset);
-  };
-  vkCmdPipelineBarrier(commandBuffer.instance, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_NV, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_NV, 0, 1, [memoryBarrier], 0, null, 0, null);
-
-  // build top-level AS
-  for (let ii = 0; ii < top.length; ++ii) {
-    let accelerationStructure = top[ii];
-    let {instanceCount} = accelerationStructure;
-    let {scratchBuffer, scratchBufferOffset} = accelerationStructure;
-    let asInfo = new VkAccelerationStructureInfoNV();
-    asInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_NV;
-    asInfo.instanceCount = instanceCount;
-    asInfo.geometryCount = 0;
-    asInfo.pGeometries = null;
-    vkCmdBuildAccelerationStructureNV(commandBuffer.instance, asInfo, accelerationStructure.instanceBuffer.buffer.instance, 0, false, accelerationStructure.instance, null, scratchBuffer.instance, scratchBufferOffset);
-  };
-  vkCmdPipelineBarrier(commandBuffer.instance, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_NV, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_NV, 0, 1, [memoryBarrier], 0, null, 0, null);
-
-  vkEndCommandBuffer(commandBuffer.instance);
-
-  let submitInfo = new VkSubmitInfo();
-  submitInfo.commandBufferCount = 1;
-  submitInfo.pCommandBuffers = [commandBuffer.instance];
-
-  let graphicsQueue = logicalDevice.getGraphicsQueue();
-  vkQueueSubmit(graphicsQueue, 1, [submitInfo], null);
-  vkQueueWaitIdle(graphicsQueue);
-
-  commandBuffer.destroy();
-};
-
-RayTracer.prototype.createPipeline = function() {
+RayTracer.prototype.createShaders = function() {
   let {logicalDevice} = this;
-  let {camera, shaderBindingTable} = this;
-  let {offscreenBuffer, accumulationBuffer} = this;
-  let {sceneGeometryBuffer, sceneTextureBuffer} = this;
-  let pipeline = new Pipeline({
-    logicalDevice,
-    shaderBindingTable,
-    offscreenBuffer,
-    accumulationBuffer,
-    sceneGeometryBuffer,
-    sceneTextureBuffer
-  });
-  pipeline.create();
-  pipeline.addUniformBuffer(camera);
-  return pipeline;
+  let includesPath = __dirname + "assets/shaders/";
+  let generation = new ShaderModule({
+    entryPoint: "main",
+    usage: VK_SHADER_STAGE_RAYGEN_BIT_NV,
+    logicalDevice
+  }).fromFilePath(__dirname + "assets/shaders/ray-gen.rgen", includesPath);
+  let closestHit = new ShaderModule({
+    entryPoint: "main",
+    usage: VK_SHADER_STAGE_CLOSEST_HIT_BIT_NV,
+    logicalDevice
+  }).fromFilePath(__dirname + "assets/shaders/ray-closest-hit.rchit", includesPath);
+  let miss = new ShaderModule({
+    entryPoint: "main",
+    usage: VK_SHADER_STAGE_MISS_BIT_NV,
+    logicalDevice
+  }).fromFilePath(__dirname + "assets/shaders/ray-miss.rmiss", includesPath);
+  return [generation, closestHit, miss];
 };
 
 RayTracer.prototype.createShaderBindingTable = function() {
@@ -297,126 +257,52 @@ RayTracer.prototype.createAccumulationBuffer = function() {
   return accumulationBuffer;
 };
 
-RayTracer.prototype.createCamera = function() {
-  let {window, logicalDevice, physicalDevice} = this;
-  let camera = new Camera({ window, logicalDevice, physicalDevice });
-  camera.create();
-  return camera;
-};
-
-RayTracer.prototype.createShaders = function() {
+RayTracer.prototype.createPipeline = function() {
   let {logicalDevice} = this;
-  let includesPath = __dirname + "assets/shaders/";
-  let generation = new ShaderModule({
-    entryPoint: "main",
-    usage: VK_SHADER_STAGE_RAYGEN_BIT_NV,
-    logicalDevice
-  }).fromFilePath(__dirname + "assets/shaders/ray-gen.rgen", includesPath);
-  let closestHit = new ShaderModule({
-    entryPoint: "main",
-    usage: VK_SHADER_STAGE_CLOSEST_HIT_BIT_NV,
-    logicalDevice
-  }).fromFilePath(__dirname + "assets/shaders/ray-closest-hit.rchit", includesPath);
-  let miss = new ShaderModule({
-    entryPoint: "main",
-    usage: VK_SHADER_STAGE_MISS_BIT_NV,
-    logicalDevice
-  }).fromFilePath(__dirname + "assets/shaders/ray-miss.rmiss", includesPath);
-
-  // max recursion depth
-  /*let size = Uint32Array.BYTES_PER_ELEMENT;
-  let specializationInfo = new VkSpecializationInfo();
-  specializationInfo.mapEntryCount = 1;
-  specializationInfo.pMapEntries = [
-    new VkSpecializationMapEntry({ size })
-  ];
-  specializationInfo.dataSize = BigInt(size);
-  specializationInfo.pData = new Uint32Array([MAX_RAY_RECURSION]).buffer;
-  generation.shaderStageInfo.pSpecializationInfo = specializationInfo;*/
-
-  return [generation, closestHit, miss];
+  let {camera, shaderBindingTable} = this;
+  let {offscreenBuffer, accumulationBuffer} = this;
+  let {sceneGeometryBuffer, sceneTextureBuffer, sceneInstanceOffsetBuffer} = this;
+  let pipeline = new Pipeline({
+    logicalDevice,
+    shaderBindingTable,
+    offscreenBuffer,
+    accumulationBuffer,
+    sceneGeometryBuffer,
+    sceneTextureBuffer,
+    sceneInstanceOffsetBuffer
+  });
+  pipeline.create();
+  pipeline.addUniformBuffer(camera);
+  return pipeline;
 };
 
 RayTracer.prototype.createSceneTextureBuffer = function() {
   let {logicalDevice, physicalDevice} = this;
   let {application} = this;
-  let textures = this.getUniqueMaterialTextures();
+  let {materialTextures} = this;
   let sceneTextureBuffer = new SceneTextureBuffer({ logicalDevice, physicalDevice });
-  sceneTextureBuffer.create(textures, application.skyboxTexture);
+  sceneTextureBuffer.create(materialTextures, application.skyboxTexture);
   return sceneTextureBuffer;
 };
 
 RayTracer.prototype.createSceneGeometryBuffer = function() {
   let {logicalDevice, physicalDevice} = this;
   let {geometries, materials} = this;
-  let textures = this.getUniqueMaterialTextures();
+  let {materialTextures} = this;
   let sceneGeometryBuffer = new SceneGeometryBuffer({ logicalDevice, physicalDevice });
-  sceneGeometryBuffer.create(geometries, materials, textures);
+  sceneGeometryBuffer.create(geometries, materials, materialTextures);
   return sceneGeometryBuffer;
 };
 
-RayTracer.prototype.createBottomLevelAccelerationStructures = function() {
+RayTracer.prototype.createSceneInstanceOffsetBuffer = function() {
   let {logicalDevice, physicalDevice} = this;
-  let {geometries, accelerationStructures} = this;
-
-  let memoryOffset = 0x0;
-  let scratchBufferOffset = 0x0;
-  for (let ii = 0; ii < geometries.length; ++ii) {
-    let geometry = geometries[ii];
-    let bottomLevelAS = new AccelerationStructure({ logicalDevice, physicalDevice });
-    // one bottom-level AS for each geometry
-    bottomLevelAS.create({ type: VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_NV, geometries: [geometry] });
-    // write memory offsets
-    {
-      bottomLevelAS.memoryOffset = memoryOffset;
-      bottomLevelAS.scratchBufferOffset = scratchBufferOffset;
-    }
-    // link with relative geometry
-    {
-      geometry.accelerationStructure = bottomLevelAS;
-    }
-    // propagate memory offsets
-    {
-      memoryOffset += bottomLevelAS.memoryRequirements.resultSize;
-      scratchBufferOffset += bottomLevelAS.memoryRequirements.buildSize;
-    }
-    accelerationStructures.bottom.push(bottomLevelAS);
-  };
-
-  // reserve memory for driver
-  // then bind all created bottom AS (of this geometry) to the reserved memory
-  let scratchBuffer = new ScratchBuffer({ logicalDevice, physicalDevice });
-  scratchBuffer.create(accelerationStructures.bottom);
+  let {geometries, materials, instances} = this;
+  let sceneInstanceOffsetBuffer = new SceneInstanceOffsetBuffer({ logicalDevice, physicalDevice });
+  sceneInstanceOffsetBuffer.create(geometries, materials, instances);
+  return sceneInstanceOffsetBuffer;
 };
 
-RayTracer.prototype.createTopLevelAccelerationStructure = function() {
-  let {logicalDevice, physicalDevice} = this;
-  let {accelerationStructures} = this;
-
-  // flat array of all active geometry instances
-  let instances = this.getGeometryInstances();
-
-  let memoryOffset = 0x0;
-  let scratchBufferOffset = 0x0;
-  let topLevelAS = new AccelerationStructure({ logicalDevice, physicalDevice });
-  topLevelAS.create({ type: VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_NV, instanceCount: instances.length });
-  // write memory offsets
-  {
-    topLevelAS.memoryOffset = memoryOffset;
-    topLevelAS.scratchBufferOffset = scratchBufferOffset;
-  }
-  // create instance buffer which holds instanced geometry references
-  {
-    topLevelAS.instanceBuffer = this.createInstanceBuffer(instances);
-  }
-  accelerationStructures.top.push(topLevelAS);
-
-  // reserve memory for driver
-  let scratchBuffer = new ScratchBuffer({ logicalDevice, physicalDevice });
-  scratchBuffer.create([topLevelAS]);
-};
-
-RayTracer.prototype.createInstanceBuffer = function(instances) {
+RayTracer.prototype.createSceneInstanceBuffer = function(instances) {
   let {logicalDevice, physicalDevice} = this;
   let {geometries, materials} = this;
   let sceneInstanceBuffer = new SceneInstanceBuffer({ logicalDevice, physicalDevice });
@@ -500,6 +386,122 @@ RayTracer.prototype.recordDrawCommands = function() {
     );
     commandBuffer.end();
   };
+};
+
+RayTracer.prototype.createBottomLevelAccelerationStructures = function() {
+  let {logicalDevice, physicalDevice} = this;
+  let {geometries, accelerationStructures} = this;
+
+  let memoryOffset = 0x0;
+  let scratchBufferOffset = 0x0;
+  for (let ii = 0; ii < geometries.length; ++ii) {
+    let geometry = geometries[ii];
+    let bottomLevelAS = new AccelerationStructure({ logicalDevice, physicalDevice });
+    // one bottom-level AS for each geometry
+    bottomLevelAS.create({ type: VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_NV, geometries: [geometry] });
+    // write memory offsets
+    {
+      bottomLevelAS.memoryOffset = memoryOffset;
+      bottomLevelAS.scratchBufferOffset = scratchBufferOffset;
+    }
+    // link with relative geometry
+    {
+      geometry.accelerationStructure = bottomLevelAS;
+    }
+    // propagate memory offsets
+    {
+      memoryOffset += bottomLevelAS.memoryRequirements.resultSize;
+      scratchBufferOffset += bottomLevelAS.memoryRequirements.buildSize;
+    }
+    accelerationStructures.bottom.push(bottomLevelAS);
+  };
+
+  // reserve memory for driver
+  // then bind all created bottom AS (of this geometry) to the reserved memory
+  let scratchBuffer = new ScratchBuffer({ logicalDevice, physicalDevice });
+  scratchBuffer.create(accelerationStructures.bottom);
+};
+
+RayTracer.prototype.createTopLevelAccelerationStructure = function() {
+  let {logicalDevice, physicalDevice} = this;
+  let {accelerationStructures} = this;
+
+  // flat array of all active geometry instances
+  let {instances} = this;
+
+  let memoryOffset = 0x0;
+  let scratchBufferOffset = 0x0;
+  let topLevelAS = new AccelerationStructure({ logicalDevice, physicalDevice });
+  topLevelAS.create({ type: VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_NV, instanceCount: instances.length });
+  // write memory offsets
+  {
+    topLevelAS.memoryOffset = memoryOffset;
+    topLevelAS.scratchBufferOffset = scratchBufferOffset;
+  }
+  // create instance buffer which holds instanced geometry references
+  {
+    topLevelAS.instanceBuffer = this.createSceneInstanceBuffer(instances);
+  }
+  accelerationStructures.top.push(topLevelAS);
+
+  // reserve memory for driver
+  let scratchBuffer = new ScratchBuffer({ logicalDevice, physicalDevice });
+  scratchBuffer.create([topLevelAS]);
+};
+
+RayTracer.prototype.buildAccelerationStructures = function() {
+  let {logicalDevice, physicalDevice} = this;
+  let {accelerationStructures} = this;
+
+  let commandBuffer = new CommandBuffer({ logicalDevice });
+  commandBuffer.create(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+  commandBuffer.begin();
+
+  let memoryBarrier = new VkMemoryBarrier();
+  memoryBarrier.srcAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_NV | VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_NV;
+  memoryBarrier.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_NV | VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_NV;
+
+  let {top, bottom} = accelerationStructures;
+
+  // build bottom-level AS
+  for (let ii = 0; ii < bottom.length; ++ii) {
+    let accelerationStructure = bottom[ii];
+    let {geometries, instanceCount} = accelerationStructure;
+    let {scratchBuffer, scratchBufferOffset} = accelerationStructure;
+    let asInfo = new VkAccelerationStructureInfoNV();
+    asInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_NV;
+    asInfo.instanceCount = instanceCount;
+    asInfo.geometryCount = geometries.length;
+    asInfo.pGeometries = geometries.map(g => g.geometry);
+    vkCmdBuildAccelerationStructureNV(commandBuffer.instance, asInfo, null, 0, false, accelerationStructure.instance, null, scratchBuffer.instance, scratchBufferOffset);
+  };
+  vkCmdPipelineBarrier(commandBuffer.instance, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_NV, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_NV, 0, 1, [memoryBarrier], 0, null, 0, null);
+
+  // build top-level AS
+  for (let ii = 0; ii < top.length; ++ii) {
+    let accelerationStructure = top[ii];
+    let {instanceCount} = accelerationStructure;
+    let {scratchBuffer, scratchBufferOffset} = accelerationStructure;
+    let asInfo = new VkAccelerationStructureInfoNV();
+    asInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_NV;
+    asInfo.instanceCount = instanceCount;
+    asInfo.geometryCount = 0;
+    asInfo.pGeometries = null;
+    vkCmdBuildAccelerationStructureNV(commandBuffer.instance, asInfo, accelerationStructure.instanceBuffer.buffer.instance, 0, false, accelerationStructure.instance, null, scratchBuffer.instance, scratchBufferOffset);
+  };
+  vkCmdPipelineBarrier(commandBuffer.instance, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_NV, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_NV, 0, 1, [memoryBarrier], 0, null, 0, null);
+
+  vkEndCommandBuffer(commandBuffer.instance);
+
+  let submitInfo = new VkSubmitInfo();
+  submitInfo.commandBufferCount = 1;
+  submitInfo.pCommandBuffers = [commandBuffer.instance];
+
+  let graphicsQueue = logicalDevice.getGraphicsQueue();
+  vkQueueSubmit(graphicsQueue, 1, [submitInfo], null);
+  vkQueueWaitIdle(graphicsQueue);
+
+  commandBuffer.destroy();
 };
 
 RayTracer.prototype.onFrame = function(commandBuffer, width, height) {

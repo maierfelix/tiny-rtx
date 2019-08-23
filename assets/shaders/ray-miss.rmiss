@@ -12,7 +12,7 @@ struct RayPayload {
 
 layout(location = 0) rayPayloadInNV RayPayload Ray;
 
-layout (binding = 8, set = 0) uniform sampler2DArray skyboxArray;
+layout (binding = 9, set = 0) uniform sampler2DArray skyboxArray;
 
 void main() {
   const vec3 rd = normalize(gl_WorldRayDirectionNV.xyz);

@@ -152,7 +152,7 @@ RayTracingDemo.prototype.execute = function() {
     let delta = (now - then);
     if (delta > 1.0 || frames === 0) {
       let fps = Math.floor((frames / delta) * 1e3);
-      window.title = `Vulkan RTX - ${app.deviceName} - FPS: ${fps} - Samples: ${camera.totalSampleCount}`;
+      window.title = `Vulkan RTX - ${app.deviceName} - FPS: ${fps} - Samples: ${camera.totalSampleCount} (${camera.sampleCount} SPP)`;
       frames = 0;
     }
     frames++;

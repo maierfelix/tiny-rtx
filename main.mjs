@@ -18,28 +18,73 @@ const TEXTURE_PATH = "textures/";
   /* Load all required Geometries*/
 
   let Head = Demo.loadGeometryFile(ASSET_PATH + MODEL_PATH + "head/untitled.obj");
+  let Cube = Demo.loadGeometryFile(ASSET_PATH + MODEL_PATH + "cube.obj");
+  let Sphere = Demo.loadGeometryFile(ASSET_PATH + MODEL_PATH + "sphere.obj");
 
   /* Load all required Textures */
-  let HeadTexture = Demo.loadTextureFile(ASSET_PATH + TEXTURE_PATH + "head/albedo.png");
+  //let HeadTexture = Demo.loadTextureFile(ASSET_PATH + TEXTURE_PATH + "head/albedo.png");
   //let NormalTexture = Demo.loadTextureFile(ASSET_PATH + TEXTURE_PATH + "head/normal.png");
-  //let BambooTexture = Demo.loadTextureFile(ASSET_PATH + TEXTURE_PATH + "bamboo-wood-semigloss/albedo.png");
+  let BambooTexture = Demo.loadTextureFile(ASSET_PATH + TEXTURE_PATH + "bamboo-wood-semigloss/albedo.png");
+  let BambooNormalTexture = Demo.loadTextureFile(ASSET_PATH + TEXTURE_PATH + "bamboo-wood-semigloss/normal.png");
 
   /* Load skybox texture */
   Demo.useSkyboxTexture(Demo.loadTextureFile(ASSET_PATH + TEXTURE_PATH + "skybox/misty_pines_4k.png"));
 
   /* Create all Geometry instances */
 
-  Head.addInstance({
+  Sphere.addInstance({
     transform: new Float32Array([
-      24.0, 0.0, 0.0, 0.0,
-      0.0, 24.0, 0.0, -6.0,
-      0.0, 0.0, 24.0, 0.0
+      6.0, 0.0, 0.0, -12,
+      0.0, 6.0, 0.0, -3.0,
+      0.0, 0.0, 6.0, 0.0
     ]),
     material: Demo.addMaterial({
       color: new Float32Array([0.0, 0.0, 0.0]),
       materialModel: MATERIAL_MODEL.DIELECTRIC,
       IOR: 1.29175,
-      texture: HeadTexture
+      texture: BambooTexture
+    })
+  });
+
+  Sphere.addInstance({
+    transform: new Float32Array([
+      6.0, 0.0, 0.0, 0.0,
+      0.0, 6.0, 0.0, -3.0,
+      0.0, 0.0, 6.0, 0.0
+    ]),
+    material: Demo.addMaterial({
+      color: new Float32Array([0.5, 0.5, 0.5]),
+      materialModel: MATERIAL_MODEL.METALLIC,
+      IOR: 0.29175,
+      texture: BambooTexture
+    })
+  });
+
+  Sphere.addInstance({
+    transform: new Float32Array([
+      6.0, 0.0, 0.0, 12.0,
+      0.0, 6.0, 0.0, -3.0,
+      0.0, 0.0, 6.0, 0.0
+    ]),
+    material: Demo.addMaterial({
+      color: new Float32Array([0.0, 0.0, 0.0]),
+      materialModel: MATERIAL_MODEL.LAMBERTIAN,
+      IOR: 0.0,
+      texture: BambooTexture
+    })
+  });
+
+  Sphere.addInstance({
+    transform: new Float32Array([
+      0.01, 0.0, 0.0, 36.0,
+      0.0, 0.01, 0.0, -6.0,
+      0.0, 0.0, 0.01, 0.0
+    ]),
+    material: Demo.addMaterial({
+      color: new Float32Array([0.0, 0.0, 0.0]),
+      materialModel: MATERIAL_MODEL.LAMBERTIAN,
+      IOR: 0.0,
+      texture: BambooNormalTexture
     })
   });
 

@@ -10,7 +10,6 @@ import GeometryLayout from "./layouts/GeometryLayout.mjs";
 export default class SceneInstanceBuffer {
   constructor(opts = {}) {
     this.buffer = null;
-    this.parent = opts.parent;
     this.logicalDevice = opts.logicalDevice;
     this.physicalDevice = opts.physicalDevice;
   }
@@ -23,6 +22,10 @@ SceneInstanceBuffer.prototype.create = function(geometries, materials, instances
   let geometryInstance = new GeometryLayout();
   let geometryInstanceBuffer = new Uint8Array(instances.length * geometryInstance.byteLength);
 
+  if (instances.length >= 2 ** 24) {
+    throw new RangeError(`Instance Index Overflow: The maximum amount of instances is 2^24`);
+  }
+
   let offset = 0x0;
   for (let ii = 0; ii < instances.length; ++ii) {
     let {geometry, material, transform} = instances[ii];
@@ -32,21 +35,11 @@ SceneInstanceBuffer.prototype.create = function(geometries, materials, instances
     geometryInstance.set("flags", VK_GEOMETRY_INSTANCE_TRIANGLE_CULL_DISABLE_BIT_NV);
     geometryInstance.set("transform", transform);
     // instanceID is 24bit
-    // 8bits are used for geometry buffer index
-    // 16bits are used for material buffer index
-    // we abuse instanceId to contain offsets to index the attribute and material buffers
-    // (possibly slower but cleaner) alternative is to use an offset buffer:
-    // offsetBuffer: {
-    //   attrIdx, matIdx, [instanceId=0]
-    //   attrIdx, matIdx  [instanceId=1]
-    // };
-    // e.g.
-    // attrBuffer[offsetBuffer[instanceId * 2 + 0x0]]
     {
       let instanceId = geometryInstance.layout["instanceId"];
-      instanceId[0] = (materialId & 0x000000FF) >> 0;
-      instanceId[1] = (materialId & 0x0000FF00) >> 8;
-      instanceId[2] = (geometryId & 0xFF);
+      instanceId[0] = (ii & 0x000000FF) >> 0;
+      instanceId[1] = (ii & 0x0000FF00) >> 8;
+      instanceId[2] = (ii & 0x00FF0000) >> 16;
     }
     geometryInstance.set("instanceOffset", 0x0);
     geometryInstance.set("accelerationStructureHandle", geometry.accelerationStructure.handle);
