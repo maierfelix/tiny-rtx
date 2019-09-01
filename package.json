@@ -9,7 +9,6 @@
     "gl-matrix": "^3.0.0",
     "nvk": "latest",
     "nvk-essentials": "^0.1.0",
-    "tolw": "latest",
-    "webgl-obj-loader": "^2.0.3"
+    "tolw": "latest"
   }
 }

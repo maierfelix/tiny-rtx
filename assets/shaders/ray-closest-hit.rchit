@@ -79,6 +79,8 @@ void main() {
   const vec3 n0 = v0.normal.xyz, n1 = v1.normal.xyz, n2 = v2.normal.xyz;
   const vec3 t0 = v0.tangent.xyz, t1 = v1.tangent.xyz, t2 = v2.tangent.xyz;
 
+  const Material material = MaterialArray[materialId].material;
+
   const vec2 uv = blerp(attribs, u0.xy, u1.xy, u2.xy);
   vec3 normal = blerp(attribs, n0.xyz, n1.xyz, n2.xyz);
   const vec3 tangent = blerp(attribs, t0.xyz, t1.xyz, t2.xyz);
@@ -92,15 +94,12 @@ void main() {
     normalWorld
   );
 
-  vec3 normalTexture = texture(textureArray, vec3(uv, 2)).rgb;
-  normalTexture = (normalTexture * 2.0 - 1.0);
-  normal = (TBN * normalTexture).xyz;
-
-  const Material material = MaterialArray[materialId].material;
-
   const uint materialModel = material.materialModel;
   const float IOR = material.IOR;
   const uint textureIndex = material.textureIndex;
+
+  vec3 normalTexture = texture(textureArray, vec3(uv, textureIndex + 1)).rgb * 2.0 - 1.0;
+  normal = (TBN * normalTexture).xyz;
 
   const vec3 color = (
     textureIndex > 0 ? texture(textureArray, vec3(uv, textureIndex)).rgb : vec3(0)

@@ -17,18 +17,15 @@ const TEXTURE_PATH = "textures/";
 
   /* Load all required Geometries*/
 
-  let Head = Demo.loadGeometryFile(ASSET_PATH + MODEL_PATH + "head/untitled.obj");
   let Cube = Demo.loadGeometryFile(ASSET_PATH + MODEL_PATH + "cube.obj");
   let Sphere = Demo.loadGeometryFile(ASSET_PATH + MODEL_PATH + "sphere.obj");
 
   /* Load all required Textures */
-  //let HeadTexture = Demo.loadTextureFile(ASSET_PATH + TEXTURE_PATH + "head/albedo.png");
-  //let NormalTexture = Demo.loadTextureFile(ASSET_PATH + TEXTURE_PATH + "head/normal.png");
   let BambooTexture = Demo.loadTextureFile(ASSET_PATH + TEXTURE_PATH + "bamboo-wood-semigloss/albedo.png");
   let BambooNormalTexture = Demo.loadTextureFile(ASSET_PATH + TEXTURE_PATH + "bamboo-wood-semigloss/normal.png");
 
   /* Load skybox texture */
-  Demo.useSkyboxTexture(Demo.loadTextureFile(ASSET_PATH + TEXTURE_PATH + "skybox/misty_pines_4k.png"));
+  Demo.useSkyboxTexture(Demo.loadTextureFile(ASSET_PATH + TEXTURE_PATH + "skybox/misty_pines_2k.png"));
 
   /* Create all Geometry instances */
 
