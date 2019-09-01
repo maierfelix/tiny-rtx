@@ -2,7 +2,7 @@
 
 ## Description
 
-This is a little experiment, exploring NVIDIA's `Vk_NV_ray_tracing` extension, which allows Real-Time Ray Tracing. 
+This is a little experiment, mainly for learning about NVIDIA's `Vk_NV_ray_tracing` extension, which allows Real-Time Ray Tracing. 
 
 ## Requirements
 
