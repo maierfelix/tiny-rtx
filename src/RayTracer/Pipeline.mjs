@@ -13,6 +13,8 @@ export default class Pipeline {
     this.logicalDevice = opts.logicalDevice;
     this.shaderBindingTable = opts.shaderBindingTable;
     this.sceneGeometryBuffer = opts.sceneGeometryBuffer;
+    this.sceneInstanceOffsetBuffer = opts.sceneInstanceOffsetBuffer;
+    this.sceneTextureBuffer = opts.sceneTextureBuffer;
   }
 };
 
@@ -29,7 +31,9 @@ Pipeline.prototype.addUniformBuffer = function(object) {
 Pipeline.prototype.createDescriptorSetLayout = function() {
   let {logicalDevice} = this;
   let {descriptorSetLayout} = this;
-  let {sceneGeometryBuffer} = this;
+  let {sceneGeometryBuffer, sceneInstanceOffsetBuffer, sceneTextureBuffer} = this;
+
+  let {offsets} = sceneInstanceOffsetBuffer;
   let {attributes, faces, materials} = sceneGeometryBuffer.buffers;
 
   let asLayoutBinding = new VkDescriptorSetLayoutBinding();
@@ -77,6 +81,24 @@ Pipeline.prototype.createDescriptorSetLayout = function() {
   materialBufferBinding.descriptorCount = materials.length;
   materialBufferBinding.stageFlags = VK_SHADER_STAGE_CLOSEST_HIT_BIT_NV;
 
+  let instanceOffsetBufferBinding = new VkDescriptorSetLayoutBinding();
+  instanceOffsetBufferBinding.binding = 7;
+  instanceOffsetBufferBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+  instanceOffsetBufferBinding.descriptorCount = offsets.length;
+  instanceOffsetBufferBinding.stageFlags = VK_SHADER_STAGE_CLOSEST_HIT_BIT_NV;
+
+  let materialTextureBinding = new VkDescriptorSetLayoutBinding();
+  materialTextureBinding.binding = 8;
+  materialTextureBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+  materialTextureBinding.descriptorCount = 1;
+  materialTextureBinding.stageFlags = VK_SHADER_STAGE_CLOSEST_HIT_BIT_NV;
+
+  let skyboxTextureBinding = new VkDescriptorSetLayoutBinding();
+  skyboxTextureBinding.binding = 9;
+  skyboxTextureBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+  skyboxTextureBinding.descriptorCount = 1;
+  skyboxTextureBinding.stageFlags = VK_SHADER_STAGE_MISS_BIT_NV;
+
   let bindings = [
     asLayoutBinding,
     outputImageLayoutBinding,
@@ -84,7 +106,10 @@ Pipeline.prototype.createDescriptorSetLayout = function() {
     uniformBufferBinding,
     vertexBufferBinding,
     indexBufferBinding,
-    materialBufferBinding
+    materialBufferBinding,
+    instanceOffsetBufferBinding,
+    materialTextureBinding,
+    skyboxTextureBinding
   ];
 
   let layoutInfo = new VkDescriptorSetLayoutCreateInfo();
@@ -135,16 +160,20 @@ Pipeline.prototype.createRayTracingPipeline = function() {
 
 Pipeline.prototype.createDescriptorSets = function(accelerationStructures) {
   let {logicalDevice} = this;
-  let {offscreenBuffer, accumulationBuffer} = this;
-  let {uniformBuffers, sceneGeometryBuffer} = this;
   let {descriptorSet, descriptorPool, descriptorSetLayout} = this;
+
+  let {offscreenBuffer, accumulationBuffer} = this;
+  let {uniformBuffers, sceneGeometryBuffer, sceneInstanceOffsetBuffer, sceneTextureBuffer} = this;
+
+  let {offsets} = sceneInstanceOffsetBuffer;
   let {attributes, faces, materials} = sceneGeometryBuffer.buffers;
 
   let poolSizes = [
     new VkDescriptorPoolSize({ type: VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_NV, descriptorCount: 1 }),
     new VkDescriptorPoolSize({ type: VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, descriptorCount: 2 }),
     new VkDescriptorPoolSize({ type: VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, descriptorCount: 1 }),
-    new VkDescriptorPoolSize({ type: VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, descriptorCount: 3 })
+    new VkDescriptorPoolSize({ type: VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, descriptorCount: 4 }),
+    new VkDescriptorPoolSize({ type: VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, descriptorCount: 2 })
   ];
 
   let descriptorPoolCreateInfo = new VkDescriptorPoolCreateInfo();
@@ -228,6 +257,43 @@ Pipeline.prototype.createDescriptorSets = function(accelerationStructures) {
     return new VkDescriptorBufferInfo({ buffer: buffer.instance, range: buffer.byteLength })
   });
 
+  let instanceOffsetBufferWrite = new VkWriteDescriptorSet();
+  instanceOffsetBufferWrite.dstSet = descriptorSet;
+  instanceOffsetBufferWrite.dstBinding = 7;
+  instanceOffsetBufferWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+  instanceOffsetBufferWrite.descriptorCount = offsets.length;
+  instanceOffsetBufferWrite.pBufferInfo = offsets.map(buffer => {
+    return new VkDescriptorBufferInfo({ buffer: buffer.instance, range: buffer.byteLength })
+  });
+
+  let {material} = sceneTextureBuffer.buffers;
+  let materialTextureWrite = new VkWriteDescriptorSet();
+  materialTextureWrite.dstSet = descriptorSet;
+  materialTextureWrite.dstBinding = 8;
+  materialTextureWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+  materialTextureWrite.descriptorCount = 1;
+  materialTextureWrite.pImageInfo = [
+    new VkDescriptorImageInfo({
+      sampler: material.instance.sampler,
+      imageView: material.instance.imageView,
+      imageLayout: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+    })
+  ];
+
+  let {skybox} = sceneTextureBuffer.buffers;
+  let skyboxTextureWrite = new VkWriteDescriptorSet();
+  skyboxTextureWrite.dstSet = descriptorSet;
+  skyboxTextureWrite.dstBinding = 9;
+  skyboxTextureWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+  skyboxTextureWrite.descriptorCount = 1;
+  skyboxTextureWrite.pImageInfo = [
+    new VkDescriptorImageInfo({
+      sampler: skybox.instance.sampler,
+      imageView: skybox.instance.imageView,
+      imageLayout: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+    })
+  ];
+
   let descriptorWrites = [
     accelerationStructureWrite,
     outputImageWrite,
@@ -235,7 +301,10 @@ Pipeline.prototype.createDescriptorSets = function(accelerationStructures) {
     uniformBufferWrite,
     vertexBufferWrite,
     indexBufferWrite,
-    materialBufferWrite
+    materialBufferWrite,
+    instanceOffsetBufferWrite,
+    materialTextureWrite,
+    skyboxTextureWrite
   ];
 
   vkUpdateDescriptorSets(logicalDevice.instance, descriptorWrites.length, descriptorWrites, 0, null);

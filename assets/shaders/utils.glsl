@@ -6,6 +6,17 @@
 #pragma optionNV(strict on)
 #pragma optionNV(unroll all)
 
+#define PI       3.14159265
+#define HALF_PI  0.5 * PI
+
+vec2 blerp(vec2 b, vec2 p1, vec2 p2, vec2 p3) {
+  return (1.0 - b.x - b.y) * p1 + b.x * p2 + b.y * p3;
+}
+
+vec3 blerp(vec2 b, vec3 p1, vec3 p2, vec3 p3) {
+  return (1.0 - b.x - b.y) * p1 + b.x * p2 + b.y * p3;
+}
+
 float schlick(const float NoR, const float IOR) {
   float r0 = (1.0 - IOR) / (1.0 + IOR);
   //r0 = clamp(r0 * r0, 0.0, 0.18);

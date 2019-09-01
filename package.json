@@ -8,7 +8,7 @@
     "@cwasm/lodepng": "^0.1.1",
     "gl-matrix": "^3.0.0",
     "nvk": "latest",
-    "nvk-essentials": "latest",
-    "tolw": "^0.1.7"
+    "nvk-essentials": "^0.1.0",
+    "tolw": "latest"
   }
 }

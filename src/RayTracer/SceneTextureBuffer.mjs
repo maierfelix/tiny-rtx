@@ -1,67 +1,41 @@
-import { ASSERT_VK_RESULT } from "../utils.mjs";
+import { WARN, ASSERT_VK_RESULT } from "../utils.mjs";
 
-import Buffer from "../Buffer.mjs";
-import ImageBuffer from "../ImageBuffer.mjs";
-import CommandBuffer from "../CommandBuffer.mjs";
+import TextureArrayBuffer from "../TextureArrayBuffer.mjs";
 
 /**
- * Stores all scene's textures into flatten buffers
+ * Creates the scene's textures (materials, skybox)
  */
 export default class SceneTextureBuffer {
   constructor(opts = {}) {
-    this.instances = [];
+    this.buffers = {
+      skybox: null,
+      material: null
+    };
     this.logicalDevice = opts.logicalDevice;
     this.physicalDevice = opts.physicalDevice;
   }
 };
 
-SceneTextureBuffer.prototype.create = function(textures) {
+SceneTextureBuffer.prototype.create = function(textures, skybox = null) {
   let {logicalDevice, physicalDevice} = this;
 
-  // create initial image buffers
-  let buffers = [];
-  for (let ii = 0; ii < textures.length; ++ii) {
-    let texture = textures[ii];
-    let {data, width, height} = texture;
+  let surfaceFormat = VK_FORMAT_R8G8B8A8_UNORM;
 
-    // source buffer
-    let pixelBuffer = new Buffer({ logicalDevice, physicalDevice });
-    pixelBuffer.allocate(
-      new Uint8Array(data.byteLength),
-      VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-    );
-
-    // write image data into the mapped buffer
-    new Uint8ClampedArray(pixelBuffer.mapped, 0x0).set(data);
-
-    // create staged image buffer
-    let surfaceFormat = VK_FORMAT_R8G8B8A8_UNORM;
-    let imageBuffer = new ImageBuffer({ logicalDevice, physicalDevice });
-
-    imageBuffer.createImage(
-      VK_IMAGE_TYPE_2D,
-      surfaceFormat,
-      new VkExtent3D({ width, height, depth: 1 }),
-      VK_IMAGE_TILING_OPTIMAL,
-      VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-    );
-
-    buffers.push({ source: pixelBuffer, destination: imageBuffer });
+  // use black skybox if non was declared
+  skybox = skybox || {
+    width: 16,
+    height: 16,
+    data: new Uint8ClampedArray(16 * 16 * 4)
   };
 
-  // transition buffer layouts
-  let commandBuffer = new CommandBuffer({ logicalDevice });
-  commandBuffer.create(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
-  commandBuffer.begin();
+  // create skybox buffer
+  let skyboxTextureBuffer = new TextureArrayBuffer({ logicalDevice, physicalDevice });
+  skyboxTextureBuffer.create([skybox], surfaceFormat);
 
-  for (let ii = 0; ii < buffers.length; ++ii) {
-    let {source, destination} = buffers[ii];
-    commandBuffer.setImageLayout(
+  // create textures buffer
+  let materialTextureBuffer = new TextureArrayBuffer({ logicalDevice, physicalDevice });
+  materialTextureBuffer.create(textures, surfaceFormat);
 
-    );
-  };
-  commandBuffer.end(true);
-
+  this.buffers.skybox = skyboxTextureBuffer;
+  this.buffers.material = materialTextureBuffer;
 };

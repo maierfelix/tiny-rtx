@@ -120,16 +120,24 @@ RayTracingDemo.prototype.execute = function() {
   let {camera} = rayTracer;
   // add window event listeners
   {
+    let isShiftPressed = false;
+    window.onkeydown = e => {
+      if (e.keyCode === 340) isShiftPressed = true;
+    };
+    window.onkeyup = e => {
+      if (e.keyCode === 340) isShiftPressed = false;
+    };
     window.onmousedown = e => (drag = true);
     window.onmouseup = e => (drag = false);
     window.onmousemove = e => {
       if (!drag) return;
-      camera.rotation.vx += -e.movementX * 0.725;
-      camera.rotation.vy += -e.movementY * 0.725;
+      camera.rotation.vx += -e.movementX * 0.325;
+      camera.rotation.vy += -e.movementY * 0.325;
       camera.resetSampleCount();
     };
     window.onmousewheel = e => {
       let {deltaY} = e;
+      if (isShiftPressed) deltaY = deltaY * 0.25;
       camera.distance.vz += deltaY;
       camera.resetSampleCount();
     };
@@ -144,7 +152,7 @@ RayTracingDemo.prototype.execute = function() {
     let delta = (now - then);
     if (delta > 1.0 || frames === 0) {
       let fps = Math.floor((frames / delta) * 1e3);
-      window.title = `Vulkan RTX - ${app.deviceName} - FPS: ${fps} - Samples: ${camera.totalSampleCount}`;
+      window.title = `Vulkan RTX - ${app.deviceName} - FPS: ${fps} - Samples: ${camera.totalSampleCount} (${camera.sampleCount} SPP)`;
       frames = 0;
     }
     frames++;
@@ -175,13 +183,25 @@ RayTracingDemo.prototype.addMaterial = function(material) {
   return this.rayTracer.addMaterial(material);
 };
 
+RayTracingDemo.prototype.useSkyboxTexture = function(texture) {
+  this.skyboxTexture = texture;
+};
+
 RayTracingDemo.prototype.drawFrame = function() {
   this.drawDefaultFrame();
 };
 
 RayTracingDemo.prototype.createRayTracer = function() {
   let {swapchain, surface, window, logicalDevice, physicalDevice} = this;
-  let rayTracer = new RayTracer({ swapchain, surface, window, logicalDevice, physicalDevice });
+  let application = this;
+  let rayTracer = new RayTracer({
+    application,
+    swapchain,
+    surface,
+    window,
+    logicalDevice,
+    physicalDevice
+  });
   return rayTracer;
 };
 
