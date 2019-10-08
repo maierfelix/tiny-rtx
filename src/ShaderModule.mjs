@@ -19,7 +19,7 @@ ShaderModule.prototype.create = function(source, extension, includesPath = "") {
   let spirv = GLSL.toSPIRVSync({
     source,
     extension,
-    includesPath
+    includeDirectories: [includesPath]
   });
   if (spirv.error) throw new Error(spirv.error);
   let shaderModuleInfo = new VkShaderModuleCreateInfo();
