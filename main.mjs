@@ -1,8 +1,8 @@
-import { __dirname } from "./src/utils.mjs";
+import { dirname } from "./src/utils.mjs";
 
 import RayTracingDemo from "./src/index.mjs";
 
-const ASSET_PATH = __dirname + "/assets/";
+const ASSET_PATH = dirname + "/assets/";
 const MODEL_PATH = "/models/";
 const TEXTURE_PATH = "/textures/";
 
@@ -16,74 +16,83 @@ const TEXTURE_PATH = "/textures/";
   await Demo.create();
 
   /* Load all required Geometries*/
-
-  let Cube = Demo.loadGeometryFile(ASSET_PATH + MODEL_PATH + "cube.obj");
+  let Plane = Demo.loadGeometryFile(ASSET_PATH + MODEL_PATH + "plane.obj");
   let Sphere = Demo.loadGeometryFile(ASSET_PATH + MODEL_PATH + "sphere.obj");
-
-  /* Load all required Textures */
-  let BambooTexture = Demo.loadTextureFile(ASSET_PATH + TEXTURE_PATH + "bamboo-wood-semigloss/albedo.png");
-  let BambooNormalTexture = Demo.loadTextureFile(ASSET_PATH + TEXTURE_PATH + "bamboo-wood-semigloss/normal.png");
-
-  /* Load skybox texture */
-  Demo.useSkyboxTexture(Demo.loadTextureFile(ASSET_PATH + TEXTURE_PATH + "skybox/misty_pines_2k.png"));
 
   /* Create all Geometry instances */
 
-  Sphere.addInstance({
+  // add floor
+  Plane.addInstance({
     transform: new Float32Array([
-      6.0, 0.0, 0.0, -12,
-      0.0, 6.0, 0.0, -3.0,
-      0.0, 0.0, 6.0, 0.0
+      64.0, 0.0, 0.0, 0.0,
+      0.0, 64.0, 0.0, -8.75,
+      0.0, 0.0, 64.0, 0.0
     ]),
     material: Demo.addMaterial({
-      color: new Float32Array([0.0, 0.0, 0.0]),
-      materialModel: MATERIAL_MODEL.DIELECTRIC,
-      IOR: 1.29175,
-      texture: BambooTexture
-    })
-  });
-
-  Sphere.addInstance({
-    transform: new Float32Array([
-      6.0, 0.0, 0.0, 0.0,
-      0.0, 6.0, 0.0, -3.0,
-      0.0, 0.0, 6.0, 0.0
-    ]),
-    material: Demo.addMaterial({
-      color: new Float32Array([0.5, 0.5, 0.5]),
+      color: new Float32Array([0.1, 0.1, 0.1]),
       materialModel: MATERIAL_MODEL.METALLIC,
-      IOR: 0.29175,
-      texture: BambooTexture
+      IOR: 0.1325
     })
   });
 
-  Sphere.addInstance({
-    transform: new Float32Array([
-      6.0, 0.0, 0.0, 12.0,
-      0.0, 6.0, 0.0, -3.0,
-      0.0, 0.0, 6.0, 0.0
-    ]),
-    material: Demo.addMaterial({
-      color: new Float32Array([0.0, 0.0, 0.0]),
-      materialModel: MATERIAL_MODEL.LAMBERTIAN,
-      IOR: 0.0,
-      texture: BambooTexture
-    })
-  });
+  /* Generate a scene with random metal and glowing balls */
 
-  Sphere.addInstance({
-    transform: new Float32Array([
-      0.01, 0.0, 0.0, 36.0,
-      0.0, 0.01, 0.0, -6.0,
-      0.0, 0.0, 0.01, 0.0
-    ]),
-    material: Demo.addMaterial({
-      color: new Float32Array([0.0, 0.0, 0.0]),
-      materialModel: MATERIAL_MODEL.LAMBERTIAN,
-      IOR: 0.0,
-      texture: BambooNormalTexture
-    })
-  });
+  let lbit = 1.75; // light ball glow intensity
+
+  for (let xx = 0; xx < 8 + 1; ++xx) {
+    for (let zz = 0; zz < 8 + 1; ++zz) {
+      // glowing
+      if ((xx * zz) % 4 === 0 && (xx + zz) % 4 === 0) {
+        // glowing ball
+        Sphere.addInstance({
+          transform: new Float32Array([
+            1.25, 0.0, 0.0, (xx - 4.0) * 4.0,
+            0.0, 1.25, 0.0, -4.0,
+            0.0, 0.0, 1.25, (zz - 4.0) * 4.0
+          ]),
+          material: Demo.addMaterial({
+            color: new Float32Array([Math.random() * lbit, Math.random() * lbit, Math.random() * lbit]),
+            materialModel: MATERIAL_MODEL.EMISSIVE,
+            IOR: 0.0 // ignored for emissive
+          })
+        });
+      // metal
+      } else {
+        let material = Demo.addMaterial({
+          color: new Float32Array([0.175, 0.175, 0.175]),
+          materialModel: MATERIAL_MODEL.METALLIC,
+          IOR: 1.0 - (xx * 8 + zz) / (8 * 8) // for metal, IOR is interpreted as the metal's "fuzziness"
+        });
+        Sphere.addInstance({
+          transform: new Float32Array([
+            1.5, 0.0, 0.0, (xx - 4.0) * 4.0,
+            0.0, 1.5, 0.0, -7.2125,
+            0.0, 0.0, 1.5, (zz - 4.0) * 4.0
+          ]),
+          material
+        });
+      }
+    };
+  };
+
+  // add some random light balls to the scene
+  for (let ii = 0; ii < 32; ++ii) {
+    let xx = Math.random() * 32 - 16;
+    let zz = Math.random() * 32 - 16;
+    // glass ball
+    Sphere.addInstance({
+      transform: new Float32Array([
+        1.0, 0.0, 0.0, xx + (Math.abs(xx) * Math.random() * 48.0) * (1.0 / xx),
+        0.0, 1.0, 0.0, -7.75,
+        0.0, 0.0, 1.0, zz + (Math.abs(zz) * Math.random() * 48.0) * (1.0 / zz),
+      ]),
+      material: Demo.addMaterial({
+        color: new Float32Array([0.996, 0.916, 0.8058]),
+        materialModel: MATERIAL_MODEL.EMISSIVE,
+        IOR: 0.0
+      })
+    });
+  };
 
   /* Run the ray tracer */
   Demo.execute();

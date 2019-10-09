@@ -1,6 +1,6 @@
 import { LOG, ASSERT_VK_RESULT } from "../utils.mjs";
 
-import { __dirname } from "../utils.mjs";
+import { dirname } from "../utils.mjs";
 
 import Camera from "./Camera.mjs";
 import Pipeline from "./Pipeline.mjs";
@@ -213,22 +213,22 @@ RayTracer.prototype.createCamera = function() {
 
 RayTracer.prototype.createShaders = function() {
   let {logicalDevice} = this;
-  let includesPath = __dirname + "/assets/shaders/";
+  let includesPath = dirname + "/assets/shaders/";
   let generation = new ShaderModule({
     entryPoint: "main",
     usage: VK_SHADER_STAGE_RAYGEN_BIT_NV,
     logicalDevice
-  }).fromFilePath(__dirname + "/assets/shaders/ray-gen.rgen", includesPath);
+  }).fromFilePath(dirname + "/assets/shaders/ray-gen.rgen", includesPath);
   let closestHit = new ShaderModule({
     entryPoint: "main",
     usage: VK_SHADER_STAGE_CLOSEST_HIT_BIT_NV,
     logicalDevice
-  }).fromFilePath(__dirname + "/assets/shaders/ray-closest-hit.rchit", includesPath);
+  }).fromFilePath(dirname + "/assets/shaders/ray-closest-hit.rchit", includesPath);
   let miss = new ShaderModule({
     entryPoint: "main",
     usage: VK_SHADER_STAGE_MISS_BIT_NV,
     logicalDevice
-  }).fromFilePath(__dirname + "/assets/shaders/ray-miss.rmiss", includesPath);
+  }).fromFilePath(dirname + "/assets/shaders/ray-miss.rmiss", includesPath);
   return [generation, closestHit, miss];
 };
 

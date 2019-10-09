@@ -85,21 +85,19 @@ void main() {
   vec3 normal = blerp(attribs, n0.xyz, n1.xyz, n2.xyz);
   const vec3 tangent = blerp(attribs, t0.xyz, t1.xyz, t2.xyz);
 
-  const vec3 normalWorld = normalize(gl_ObjectToWorldNV * vec4(normal, 0));
-  const vec3 tangentWorld = normalize(gl_ObjectToWorldNV * vec4(tangent, 0));
-  const vec3 bitangentWorld = cross(normalWorld, tangentWorld);
-  const mat3 TBN = mat3(
-    tangentWorld,
-    bitangentWorld,
-    normalWorld
-  );
-
   const uint materialModel = material.materialModel;
   const float IOR = material.IOR;
   const uint textureIndex = material.textureIndex;
 
-  vec3 normalTexture = texture(textureArray, vec3(uv, textureIndex + 1)).rgb * 2.0 - 1.0;
-  normal = (TBN * normalTexture).xyz;
+  const vec3 nw = normalize(gl_ObjectToWorldNV * vec4(normal, 0));
+  const vec3 tw = normalize(gl_ObjectToWorldNV * vec4(tangent, 0));
+  const vec3 bw = cross(nw, tw);
+
+  normal = (
+    textureIndex > 0 ?
+    (mat3(tw, bw, nw) * texture(textureArray, vec3(uv, textureIndex + 1)).rgb * 2.0 - 1.0).xyz :
+    normal
+  );
 
   const vec3 color = (
     textureIndex > 0 ? texture(textureArray, vec3(uv, textureIndex)).rgb : vec3(0)

@@ -95,10 +95,10 @@ export function WARN() {
 // - check if __dirname is available (running not in ESM mode)
 // - if running in ESM mode, use import.meta.url for __dirname
 // - if running in non-ESM mode, uses the original __dirname
-export const __dirname = (
-  (eval("typeof __dirname === 'undefined'")) ?
+export const dirname = (
+  (typeof __dirname === "undefined") ?
   path.dirname(url.fileURLToPath(import.meta.url)) + "/../" :
-  (eval("__dirname"))
+  __dirname
 );
 
 export function calculateTangentsAndBitangents(object) {
