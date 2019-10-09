@@ -1,4 +1,8 @@
-# tiny-rtx
+<h1 align="center">Tiny RTX</h1>
+
+<p align="center">
+    <a href="https://github.com/maierfelix/tiny-rtx/releases/latest"><img alt="Download" src="https://i.imgur.com/WFhqKC1.png"></a>
+</p>
 
 ## Description
 
