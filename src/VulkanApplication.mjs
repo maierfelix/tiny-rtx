@@ -45,7 +45,8 @@ VulkanApplication.prototype.createWindow = function() {
   let window = new VulkanWindow({
     width: 1024 + 256,
     height: 768,
-    title: "Vulkan RTX"
+    title: "Vulkan RTX",
+    resizable: false
   });
   return window;
 };
