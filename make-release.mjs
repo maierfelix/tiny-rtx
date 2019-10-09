@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 
-import ncp from "ncp";
+import _ncp from "ncp";
 import nexe from "nexe";
 import rollup from "rollup";
 import zap from "zip-a-folder";
@@ -9,7 +9,17 @@ import nodew from "create-nodew-exe";
 
 import pkg from "./package.json";
 
-ncp.limit = 16;
+_ncp.limit = 16;
+
+// make ncp promiseable
+let ncp = function(src, dst, opts = {}) {
+  return new Promise(resolve => {
+    _ncp(src, dst, opts, e => {
+      if (e) throw e;
+      resolve();
+    });
+  });
+};
 
 let {platform} = process;
 
@@ -37,13 +47,18 @@ let buildNode = !!(
   let srcPath = `main.mjs`;
   let dstPath = `dist/${pkg.version}`;
   let releasePath = `${dstPath}/${platform}-${pkg.version}.zip`;
-  let zipReleasePath = `${dstPath}/../${platform}-${pkg.version}.zip`;
+  let zipReleasePath = `${dstPath}/../${pkg.name}-${platform}-${pkg.version}.zip`;
+
+  let srcNodeModulesPath = `./node_modules`;
+  let dstNodeModulesPath = `${dstPath}/node_modules`;
 
   console.log(`Reserving directories..`);
   // reserve directories
   if (!fs.existsSync(dstPath)) fs.mkdirSync(dstPath);
+  if (!fs.existsSync(dstPath + "/node_modules")) fs.mkdirSync(dstPath + "/node_modules");
 
   // delete previous zip release, if exists
+  if (fs.existsSync(releasePath)) fs.unlinkSync(releasePath);
   if (fs.existsSync(zipReleasePath)) fs.unlinkSync(zipReleasePath);
 
   // create bundle.js
@@ -74,22 +89,29 @@ let buildNode = !!(
   fs.renameSync(`./${bundleName}${ext}`, dstPath + `/${bundleName}${ext}`);
 
   // copying assets to dist/x/assets
-  ncp("./assets", dstPath + "/assets", async function(err) {
-    if (err) {
-     return console.error(err);
-    } else {
-      // patch the executable to not show a window (windows-oly)
-      if (platform === "win32") {
-        nodew({
-          src: dstPath + `/${bundleName}.exe`,
-          dst: dstPath + `/${bundleName}.exe`
-        });
-      }
-      // zip everything
-      await zap.zip(dstPath, zipReleasePath);
-      // move the zip from ../ to ./
-      fs.renameSync(zipReleasePath, releasePath);
+  await ncp("./assets", dstPath + "/assets");
+  //await ncp("./assets", dstPath + "/assets");
+
+  // add necessary dependencies
+  for (let key in pkg.dependencies) {
+    let targetFolderPath = `${dstNodeModulesPath}/${key}`;
+    if (targetFolderPath.match(`@cwasm`)) {
+      targetFolderPath = `${dstNodeModulesPath}/@cwasm`;
     }
-  });
+    if (!fs.existsSync(targetFolderPath)) fs.mkdirSync(targetFolderPath);
+    await ncp(`${srcNodeModulesPath}/${key}`, `${dstNodeModulesPath}/${key}`);
+  };
+
+  // patch the executable to not show a console (windows-oly)
+  if (platform === "win32") {
+    nodew({
+      src: dstPath + `/${bundleName}.exe`,
+      dst: dstPath + `/${bundleName}.exe`
+    });
+  }
+  // zip everything
+  await zap.zip(dstPath, zipReleasePath);
+  // move the zip from ../ to ./
+  fs.renameSync(zipReleasePath, releasePath);
 
 })();
