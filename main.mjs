@@ -2,9 +2,9 @@ import { __dirname } from "./src/utils.mjs";
 
 import RayTracingDemo from "./src/index.mjs";
 
-const ASSET_PATH = __dirname + "assets/";
-const MODEL_PATH = "models/";
-const TEXTURE_PATH = "textures/";
+const ASSET_PATH = __dirname + "/assets/";
+const MODEL_PATH = "/models/";
+const TEXTURE_PATH = "/textures/";
 
 (async function main() {
 

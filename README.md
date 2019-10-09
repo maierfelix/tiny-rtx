@@ -32,6 +32,16 @@ npm install
 npm run start
 ````
 
+## Releasing
+
+````
+npm run release --node-binary="window-x64-12.9.1"
+````
+
+Flags:
+  - `--node-binary`: The node version to use
+  - `--build-node`: Build node from scratch instead of using a pre-built version (from [here](https://github.com/nexe/nexe/releases))
+
 ## Controls
 
  - Use your mouse buttons to rotate the camera

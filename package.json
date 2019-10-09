@@ -2,7 +2,8 @@
   "name": "tiny-rtx",
   "version": "0.0.1",
   "scripts": {
-    "start": "node --experimental-modules ./main.mjs --verbose-log"
+    "start": "node --experimental-modules ./main.mjs --verbose-log",
+    "release": "node --experimental-modules ./make-release.mjs"
   },
   "dependencies": {
     "@cwasm/lodepng": "^0.1.1",
@@ -10,5 +11,12 @@
     "nvk": "latest",
     "nvk-essentials": "latest",
     "tolw": "latest"
+  },
+  "devDependencies": {
+    "create-nodew-exe": "^1.0.5",
+    "ncp": "^2.0.0",
+    "nexe": "^3.3.2",
+    "rollup": "^1.23.1",
+    "zip-a-folder": "0.0.9"
   }
 }

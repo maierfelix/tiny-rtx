@@ -90,7 +90,16 @@ export function WARN() {
   console.log("\x1b[33m%s\x1b[0m", args);
 };
 
-export const __dirname = path.dirname(url.fileURLToPath(import.meta.url)) + "/../";
+// an evil hack..
+// this does the following:
+// - check if __dirname is available (running not in ESM mode)
+// - if running in ESM mode, use import.meta.url for __dirname
+// - if running in non-ESM mode, uses the original __dirname
+export const __dirname = (
+  (eval("typeof __dirname === 'undefined'")) ?
+  path.dirname(url.fileURLToPath(import.meta.url)) + "/../" :
+  (eval("__dirname"))
+);
 
 export function calculateTangentsAndBitangents(object) {
   let {vertices, normals, uvs, indices} = object;

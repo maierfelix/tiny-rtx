@@ -112,3 +112,5 @@ assets/models/webcam.obj
 
 assets/models/*.mtl
 assets/models/head
+
+dist/*/*
